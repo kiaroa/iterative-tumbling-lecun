@@ -1,0 +1,86 @@
+-- SQLite schema for the toll-minimising route service.
+-- Source spec: iterative-tumbling-lecun.md. Populated by the Phase 1b+ ETL loaders
+-- (tollroute/etl/*.py) — this file only defines structure, no data.
+
+PRAGMA foreign_keys = ON;
+
+-- One row per toll gate, sourced from gare_master.csv (956 rows, 953 with lat/lon).
+-- snap_* columns are filled by the Phase 1b OSRM /nearest snapping step, not the CSV load.
+CREATE TABLE IF NOT EXISTS gates (
+    gare_id             INTEGER PRIMARY KEY,
+    canonical_name      TEXT,
+    all_names           TEXT,
+    primary_route       TEXT,
+    all_routes          TEXT,
+    inferred_route      TEXT,
+    junction_ref        TEXT,
+    all_junctions       TEXT,
+    operators           TEXT,
+    name_collision      TEXT,
+    lat                 REAL,
+    lon                 REAL,
+    pr_km               REAL,
+    commune             TEXT,
+    departement         TEXT,
+    is_interchange      TEXT,
+    connecting_road     TEXT,
+    direction_served    TEXT,
+    toll_system_type    TEXT,
+    concession_boundary TEXT,
+    gare_type           TEXT,
+    match_tier          TEXT,
+    match_agreement     TEXT,
+    match_source        TEXT,
+    snap_lat            REAL,
+    snap_lon            REAL,
+    snap_distance_m     REAL
+);
+
+-- One row per fare-matrix entry, sourced from od_pairs.csv (57,378 rows).
+-- Each row is a virtual toll edge: entry gate -> exit gate, priced per vehicle class.
+-- class1..class5 are nullable: zero-price rows are loaded (never silently dropped) and
+-- remediated as typed dispositions in Phase 2b.
+CREATE TABLE IF NOT EXISTS fares (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_gare_id  INTEGER,
+    to_gare_id    INTEGER,
+    operator      TEXT NOT NULL,
+    from_route    TEXT,
+    from_junction TEXT,
+    from_gare     TEXT,
+    to_route      TEXT,
+    to_junction   TEXT,
+    to_gare       TEXT,
+    distance_km   REAL,
+    start_time    TEXT,
+    end_time      TEXT,
+    class1        REAL,
+    class2        REAL,
+    class3        REAL,
+    class4        REAL,
+    class5        REAL,
+    FOREIGN KEY (from_gare_id) REFERENCES gates (gare_id),
+    FOREIGN KEY (to_gare_id) REFERENCES gates (gare_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_fares_from_gare_id ON fares (from_gare_id);
+CREATE INDEX IF NOT EXISTS idx_fares_to_gare_id ON fares (to_gare_id);
+CREATE INDEX IF NOT EXISTS idx_fares_operator ON fares (operator);
+
+-- Operator name normalisation (spec: "Operator alias map: SQLite table, not source code").
+-- raw_name is the exact casing/spelling as it appears in the source CSVs
+-- (e.g. "sanef", "ASFC", "escota", "aliea"); canonical_operator is the normalised form.
+CREATE TABLE IF NOT EXISTS operator_alias (
+    raw_name          TEXT PRIMARY KEY,
+    canonical_operator TEXT NOT NULL
+);
+
+-- Per-vehicle-class generalised-cost defaults (Phase 4a: G = toll + km*running_cost_per_km
+-- + hours*value_of_time_eur_per_hour). Populated by Phase 4a, not this scaffold; structure
+-- only. is_conjecture flags figures not yet sourced from DGITM/EU data.
+CREATE TABLE IF NOT EXISTS class_config (
+    vehicle_class              INTEGER PRIMARY KEY,
+    running_cost_per_km        REAL,
+    value_of_time_eur_per_hour REAL,
+    is_conjecture              INTEGER NOT NULL DEFAULT 0
+);
