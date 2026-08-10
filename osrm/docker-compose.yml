@@ -1,0 +1,12 @@
+# NOTE: this repo checkout runs inside a docker-outside-of-docker devcontainer, so the
+# docker daemon resolves bind-mount sources against the *host* filesystem, not this
+# container's /workspace. ${OSRM_DATA_DIR} must be set to the host-side absolute path of
+# this osrm/data directory (see README.md for how to find it) before `docker compose up`.
+services:
+  osrm-routed:
+    image: ghcr.io/project-osrm/osrm-backend:latest
+    command: osrm-routed --algorithm mld /data/bfc-ara.osrm
+    volumes:
+      - ${OSRM_DATA_DIR}:/data
+    ports:
+      - "5000:5000"
