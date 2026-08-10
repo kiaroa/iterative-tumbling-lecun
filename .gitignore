@@ -7,4 +7,5 @@ osrm/data/
 __pycache__/
 *.pyc
 .pytest_cache/
+tollroute/db/*.sqlite
 
