@@ -125,11 +125,17 @@ def _graph_copy(g: graph_mod.Graph) -> graph_mod.Graph:
     # reuse hazard for this endpoint in Phase 1c's PROGRESS entry): each
     # request needs its own copy of the long-lived startup graph so one
     # request's origin/destination access edges can't leak into the next.
+    # static_edge_count/static_edge_arrays are carried over by reference
+    # (Phase 4c-follow-up-3): they're read-only per request and shared
+    # unchanged across every copy of the startup graph, so build_edge_arrays
+    # can still take its cached-static-prefix fast path.
     return graph_mod.Graph(
         nodes=list(g.nodes),
         node_index=dict(g.node_index),
         edges=list(g.edges),
         gate_coords=dict(g.gate_coords),
+        static_edge_count=g.static_edge_count,
+        static_edge_arrays=g.static_edge_arrays,
     )
 
 

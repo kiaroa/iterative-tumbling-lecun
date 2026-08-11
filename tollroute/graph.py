@@ -43,12 +43,16 @@ import sqlite3
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import httpx
 import numpy as np
 
 from tollroute import osrm_client as osrm_client_mod
 from tollroute.etl import cluster_gates
+
+if TYPE_CHECKING:
+    from tollroute.routing import StaticEdgeArrays
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +117,19 @@ class Graph:
     # alongside it so add_access_edges can OSRM-route to/from any gate
     # without a second DB round-trip.
     gate_coords: dict[int, tuple[float, float]] = field(default_factory=dict)
+    # Phase 4c-follow-up-3: cache of routing.build_edge_arrays's numpy arrays
+    # for exactly `edges[:static_edge_count]` - the edges present right after
+    # `build_graph` finishes, before any per-request access edge is added.
+    # Populated once by `routing.finalize_static_edge_arrays` (called at the
+    # end of `build_graph`, below) so a per-request `build_edge_arrays` call
+    # only has to build arrays for the handful of new access edges and
+    # concatenate them onto this cached prefix, instead of re-looping over
+    # all ~900k static edges every request. `None` for a `Graph` built
+    # directly (e.g. via `Graph(...)` in unit tests) rather than through
+    # `build_graph` - `build_edge_arrays` falls back to a full rebuild in
+    # that case.
+    static_edge_count: int = 0
+    static_edge_arrays: "StaticEdgeArrays | None" = None
 
     def add_node(self, node: Node) -> int:
         if node not in self.node_index:
@@ -418,6 +435,15 @@ def build_graph(
     boundary_edge_count, exit_reentry_edge_count = _add_transfer_edges(
         graph, gare_master_path, gate_position
     )
+
+    # Imported lazily - routing.py imports Edge/EdgeType/Graph/Node from this
+    # module at its own module level, so a module-level import here would be
+    # circular (same reasoning as the matrices_mod import above). Must run
+    # after every static edge (toll/toll-free/dwell/boundary/exit_reentry) is
+    # added and before this graph is ever handed to add_access_edges.
+    from tollroute import routing as routing_mod
+
+    routing_mod.finalize_static_edge_arrays(graph)
 
     logger.info(
         "overlay graph built: %d nodes, %d toll edges, %d toll-free edges, %d dwell "

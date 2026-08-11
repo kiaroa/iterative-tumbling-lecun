@@ -17,6 +17,8 @@ toll/time/distance trade-off.
 
 from __future__ import annotations
 
+from collections import ChainMap
+from collections.abc import Mapping
 from dataclasses import dataclass
 
 import numpy as np
@@ -56,32 +58,101 @@ class EdgeArrays:
 
     rows: np.ndarray
     cols: np.ndarray
-    edge_lookup: dict[tuple[int, int], Edge]
+    edge_lookup: Mapping[tuple[int, int], Edge]
     duration_arr: np.ndarray
     toll_arr: np.ndarray
     km_arr: np.ndarray
     hr_arr: np.ndarray
 
 
-def build_edge_arrays(graph: Graph, vehicle_class: int) -> EdgeArrays:
-    """Node-index pairs are unique per Edge by construction (see graph.py's
-    four-role node split), so no two distinct edges should ever share an
-    (i, j) key; "keep last seen" on a colliding key is a defensive fallback,
-    not a path this graph is expected to exercise.
+@dataclass
+class StaticEdgeArrays:
+    """Cache of `EdgeArrays`' components for exactly `graph.edges[:graph.
+    static_edge_count]` - the edges present right after `build_graph`
+    finishes, before any per-request access edge is added. Built once by
+    `finalize_static_edge_arrays`; `build_edge_arrays` concatenates this with
+    the handful of per-request access edges instead of re-looping over all
+    ~900k static edges every request (Phase 4c-follow-up-3).
 
-    Reads each edge's `from_idx`/`to_idx` (cached once by `Graph.add_edge` at
-    graph-construction time, Phase 4c-follow-up-2) rather than re-resolving
-    them via `graph.node_index[edge.from_node]`/`[to_node]` - the latter costs
-    a `Node`-dataclass hash/eq per lookup, ~1.8M of them over the national
-    graph's ~900k edges, and was the dominant remaining cost of this function
-    (~0.72 s, profiled) after Phase 4c-follow-up cut the redundant per-request
-    rebuild count from 3x to 1x.
+    `toll_arr` is precomputed for all 5 vehicle classes (rather than the one
+    requested per call) since it's cheap to do once at startup and access
+    edges never carry a toll, so no other per-class recomputation is needed
+    afterwards.
+    """
+
+    rows: np.ndarray
+    cols: np.ndarray
+    duration_arr: np.ndarray
+    km_arr: np.ndarray
+    hr_arr: np.ndarray
+    toll_arr_by_class: dict[int, np.ndarray]
+    edge_lookup: dict[tuple[int, int], Edge]
+
+
+def _edge_indices(graph: Graph, edge: Edge) -> tuple[int, int]:
+    i = edge.from_idx if edge.from_idx >= 0 else graph.node_index[edge.from_node]
+    j = edge.to_idx if edge.to_idx >= 0 else graph.node_index[edge.to_node]
+    return i, j
+
+
+def finalize_static_edge_arrays(graph: Graph) -> None:
+    """Populates `graph.static_edge_count`/`static_edge_arrays` from
+    `graph.edges` as they stand right now.
+
+    Must only be called once, by `build_graph`, after every static edge
+    (toll/toll-free/dwell/boundary/exit_reentry) has been added and before
+    this graph is ever passed to `add_access_edges` - anything added after
+    this call is treated by `build_edge_arrays` as a per-request access edge,
+    so calling it late would wrongly freeze request-specific edges as if
+    they were static.
     """
     edge_lookup: dict[tuple[int, int], Edge] = {}
     for edge in graph.edges:
-        i = edge.from_idx if edge.from_idx >= 0 else graph.node_index[edge.from_node]
-        j = edge.to_idx if edge.to_idx >= 0 else graph.node_index[edge.to_node]
-        edge_lookup[(i, j)] = edge
+        edge_lookup[_edge_indices(graph, edge)] = edge
+
+    m = len(edge_lookup)
+    rows = np.empty(m, dtype=np.int64)
+    cols = np.empty(m, dtype=np.int64)
+    duration_arr = np.empty(m, dtype=np.float64)
+    km_arr = np.empty(m, dtype=np.float64)
+    hr_arr = np.empty(m, dtype=np.float64)
+    toll_arr_by_class: dict[int, np.ndarray] = {vc: np.zeros(m, dtype=np.float64) for vc in (1, 2, 3, 4, 5)}
+
+    for idx, ((i, j), edge) in enumerate(edge_lookup.items()):
+        rows[idx] = i
+        cols[idx] = j
+        duration_arr[idx] = edge.duration_s
+        km_arr[idx] = edge.distance_m / 1000.0
+        hr_arr[idx] = edge.duration_s / 3600.0
+        if edge.edge_type == EdgeType.TOLL:
+            for vc, toll_arr in toll_arr_by_class.items():
+                toll_arr[idx] = edge.toll_eur[vc]
+
+    graph.static_edge_count = len(graph.edges)
+    graph.static_edge_arrays = StaticEdgeArrays(
+        rows=rows,
+        cols=cols,
+        duration_arr=duration_arr,
+        km_arr=km_arr,
+        hr_arr=hr_arr,
+        toll_arr_by_class=toll_arr_by_class,
+        edge_lookup=edge_lookup,
+    )
+
+
+def _build_edge_arrays_full(graph: Graph, vehicle_class: int) -> EdgeArrays:
+    """Full per-edge rebuild, used when `graph.static_edge_arrays` hasn't
+    been populated (a `Graph` built directly, e.g. via `Graph(...)` in unit
+    tests, rather than through `build_graph`).
+
+    Node-index pairs are unique per Edge by construction (see graph.py's
+    four-role node split), so no two distinct edges should ever share an
+    (i, j) key; "keep last seen" on a colliding key is a defensive fallback,
+    not a path this graph is expected to exercise.
+    """
+    edge_lookup: dict[tuple[int, int], Edge] = {}
+    for edge in graph.edges:
+        edge_lookup[_edge_indices(graph, edge)] = edge
 
     m = len(edge_lookup)
     rows = np.empty(m, dtype=np.int64)
@@ -103,9 +174,76 @@ def build_edge_arrays(graph: Graph, vehicle_class: int) -> EdgeArrays:
     return EdgeArrays(rows, cols, edge_lookup, duration_arr, toll_arr, km_arr, hr_arr)
 
 
+def _build_edge_arrays_incremental(
+    graph: Graph, sea: StaticEdgeArrays, vehicle_class: int
+) -> EdgeArrays:
+    """Concatenates `sea` (the cached ~900k-edge static prefix) with arrays
+    built only for `graph.edges[graph.static_edge_count:]` - the handful of
+    access edges `add_access_edges` added for this request - instead of
+    re-looping over every static edge again.
+    """
+    new_edges = graph.edges[graph.static_edge_count :]
+    if not new_edges:
+        return EdgeArrays(
+            sea.rows,
+            sea.cols,
+            sea.edge_lookup,
+            sea.duration_arr,
+            sea.toll_arr_by_class[vehicle_class],
+            sea.km_arr,
+            sea.hr_arr,
+        )
+
+    m = len(new_edges)
+    new_rows = np.empty(m, dtype=np.int64)
+    new_cols = np.empty(m, dtype=np.int64)
+    new_duration = np.empty(m, dtype=np.float64)
+    new_toll = np.zeros(m, dtype=np.float64)
+    new_km = np.empty(m, dtype=np.float64)
+    new_hr = np.empty(m, dtype=np.float64)
+    new_edge_lookup: dict[tuple[int, int], Edge] = {}
+
+    for idx, edge in enumerate(new_edges):
+        i, j = _edge_indices(graph, edge)
+        new_rows[idx] = i
+        new_cols[idx] = j
+        new_duration[idx] = edge.duration_s
+        new_km[idx] = edge.distance_m / 1000.0
+        new_hr[idx] = edge.duration_s / 3600.0
+        if edge.edge_type == EdgeType.TOLL:
+            new_toll[idx] = edge.toll_eur[vehicle_class]
+        new_edge_lookup[(i, j)] = edge
+
+    return EdgeArrays(
+        rows=np.concatenate([sea.rows, new_rows]),
+        cols=np.concatenate([sea.cols, new_cols]),
+        edge_lookup=ChainMap(new_edge_lookup, sea.edge_lookup),
+        duration_arr=np.concatenate([sea.duration_arr, new_duration]),
+        toll_arr=np.concatenate([sea.toll_arr_by_class[vehicle_class], new_toll]),
+        km_arr=np.concatenate([sea.km_arr, new_km]),
+        hr_arr=np.concatenate([sea.hr_arr, new_hr]),
+    )
+
+
+def build_edge_arrays(graph: Graph, vehicle_class: int) -> EdgeArrays:
+    """Builds the sparsity pattern plus every per-edge cost component
+    `find_route`/`pareto_sweep` need.
+
+    Dispatches to `_build_edge_arrays_incremental` when `graph.
+    static_edge_arrays` has been populated (i.e. `graph` came from
+    `build_graph`, whose static ~900k edges never change between requests -
+    see `StaticEdgeArrays`'s docstring), falling back to a full rebuild
+    otherwise (e.g. a `Graph` built directly via `Graph(...)` in unit tests).
+    """
+    sea = graph.static_edge_arrays
+    if sea is not None:
+        return _build_edge_arrays_incremental(graph, sea, vehicle_class)
+    return _build_edge_arrays_full(graph, vehicle_class)
+
+
 def route_from_predecessors(
     graph: Graph,
-    edge_lookup: dict[tuple[int, int], Edge],
+    edge_lookup: Mapping[tuple[int, int], Edge],
     predecessors,
     origin: Node,
     origin_idx: int,
