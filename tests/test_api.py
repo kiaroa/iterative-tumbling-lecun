@@ -32,7 +32,11 @@ requires_osrm = pytest.mark.skipif(
 
 
 @requires_osrm
-def test_route_endpoint_returns_same_option_set_as_cli():
+def test_route_endpoint_fastest_option_matches_cli():
+    # tollroute.cli.run uses the same duration-only routing.find_route as
+    # response.shape_response's "fastest" label (Phase 4b), so the two must
+    # agree exactly even though /route now returns a labelled option set
+    # rather than a single flat route.
     cli_route = cli_run("dijon", "lyon", vehicle_class=1)
 
     with TestClient(api.app) as client:
@@ -40,10 +44,30 @@ def test_route_endpoint_returns_same_option_set_as_cli():
 
     assert resp.status_code == 200
     data = resp.json()
-    assert data["toll_eur"] == pytest.approx(cli_route.toll_eur)
-    assert data["duration_s"] == pytest.approx(cli_route.duration_s)
-    assert data["distance_m"] == pytest.approx(cli_route.distance_m)
-    assert data["gates"] == _gate_chain(cli_route)
+    assert data["vehicle_class"] == 1
+    options = data["options"]
+    assert 1 <= len(options) <= 5
+
+    fastest = [o for o in options if "fastest" in o["labels"]]
+    assert len(fastest) == 1
+    assert fastest[0]["toll_eur"] == pytest.approx(cli_route.toll_eur)
+    assert fastest[0]["duration_s"] == pytest.approx(cli_route.duration_s)
+    assert fastest[0]["distance_m"] == pytest.approx(cli_route.distance_m)
+    assert fastest[0]["gates"] == _gate_chain(cli_route)
+
+    assert any("cheapest" in o["labels"] for o in options)
+    assert any("best_value" in o["labels"] for o in options)
+
+
+@requires_osrm
+def test_route_endpoint_accepts_vot_override():
+    with TestClient(api.app) as client:
+        resp = client.get(
+            "/route",
+            params={"origin": "dijon", "destination": "lyon", "vehicle_class": 1, "vot_eur_per_hour": 1.0},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["vot_eur_per_hour"] == pytest.approx(1.0)
 
 
 @requires_osrm
