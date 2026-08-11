@@ -47,6 +47,7 @@ from pathlib import Path
 import httpx
 import numpy as np
 
+from tollroute import osrm_client as osrm_client_mod
 from tollroute.etl import cluster_gates
 
 logger = logging.getLogger(__name__)
@@ -481,60 +482,61 @@ def add_access_edges(
     enter a toll edge immediately afterwards, same as any other IN arrival).
     Destination is reachable from every gate's OUT and OUT_TOLL node (both
     are valid "off the tolled network, free to finish the journey" points).
+
+    **Phase 4c:** fetches those legs via two batched OSRM `/table` calls
+    (`tollroute.osrm_client.one_to_many_table`/`many_to_one_table`, each
+    internally tiled to <=100-wide requests) rather than one `/route` call
+    per gate per direction - replaces what was up to ~1,600 sequential HTTP
+    round trips (measured ~19.5 s warm against the national 815-gate DB, see
+    IMPLEMENTATION_PLAN.md's Phase 4c entry) with ~18, which is what gets a
+    warm request under the spec's ~300 ms budget. OUT and OUT_TOLL share the
+    same physical gate coordinate, so the exit-side table is queried once per
+    gate id (not once per role) and its result reused for both roles.
     """
     origin_node = Node(-1, NodeRole.IN)
     destination_node = Node(-2, NodeRole.OUT)
     graph.add_node(origin_node)
     graph.add_node(destination_node)
 
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
+    entry_gids = sorted({n.gare_id for n in graph.node_index if n.gare_id >= 0 and n.role is NodeRole.IN})
+    exit_gids = sorted(
+        {n.gare_id for n in graph.node_index if n.gare_id >= 0 and n.role in (NodeRole.OUT, NodeRole.OUT_TOLL)}
+    )
+    entry_coords = [graph.gate_coords[gid] for gid in entry_gids]
+    exit_coords = [graph.gate_coords[gid] for gid in exit_gids]
+
+    # exclude=toll on both sides: the origin hasn't paid to enter the tolled
+    # network yet (its approach must not ride a tolled section for free ahead
+    # of the gate), and OUT/OUT_TOLL are documented as "off the tolled
+    # network, free to finish the journey" - without this, OSRM's plain
+    # /route can route the "local finish" straight back onto the paid
+    # motorway, letting Dijkstra ride it for free and defeating the whole
+    # toll-edge accounting (confirmed empirically: Dijon->Lyon's access edge
+    # alone reproduced the tolled route's distance/duration almost exactly,
+    # at zero toll).
+    entry_legs = osrm_client_mod.one_to_many_table(osrm_client, origin, entry_coords, exclude_toll=True)
+    exit_legs = osrm_client_mod.many_to_one_table(osrm_client, exit_coords, destination, exclude_toll=True)
 
     no_toll_free_access_count = 0
-    for node in list(graph.node_index):
-        gid, role = node.gare_id, node.role
-        if gid < 0:
-            continue  # origin_node/destination_node just added above
-        if role is NodeRole.IN:
-            g_lat, g_lon = graph.gate_coords[gid]
-            # exclude=toll: the origin hasn't paid to enter the tolled
-            # network yet, so its approach to a gate must not be able to
-            # ride a tolled section for free ahead of that gate.
-            route = _osrm_route(osrm_client, (o_lat, o_lon), (g_lat, g_lon), exclude_toll=True)
-            if route is None:
-                no_toll_free_access_count += 1
+    for gid, leg in zip(entry_gids, entry_legs):
+        if leg is None:
+            no_toll_free_access_count += 1
+            continue
+        duration, distance = leg
+        graph.edges.append(
+            Edge(origin_node, Node(gid, NodeRole.IN), EdgeType.ACCESS, duration, distance)
+        )
+
+    for gid, leg in zip(exit_gids, exit_legs):
+        if leg is None:
+            no_toll_free_access_count += 1
+            continue
+        duration, distance = leg
+        for role in (NodeRole.OUT, NodeRole.OUT_TOLL):
+            node = Node(gid, role)
+            if node not in graph.node_index:
                 continue
-            graph.edges.append(
-                Edge(
-                    origin_node,
-                    Node(gid, NodeRole.IN),
-                    EdgeType.ACCESS,
-                    route["duration"],
-                    route["distance"],
-                )
-            )
-        elif role in (NodeRole.OUT, NodeRole.OUT_TOLL):
-            g_lat, g_lon = graph.gate_coords[gid]
-            # exclude=toll: OUT/OUT_TOLL are documented as "off the tolled
-            # network, free to finish the journey" - without this, OSRM's
-            # plain /route can route the "local finish" straight back onto
-            # the paid motorway, letting Dijkstra ride it for free and
-            # defeating the whole toll-edge accounting (confirmed empirically:
-            # Dijon->Lyon's access edge alone reproduced the tolled route's
-            # distance/duration almost exactly, at zero toll).
-            route = _osrm_route(osrm_client, (g_lat, g_lon), (d_lat, d_lon), exclude_toll=True)
-            if route is None:
-                no_toll_free_access_count += 1
-                continue
-            graph.edges.append(
-                Edge(
-                    Node(gid, role),
-                    destination_node,
-                    EdgeType.ACCESS,
-                    route["duration"],
-                    route["distance"],
-                )
-            )
+            graph.edges.append(Edge(node, destination_node, EdgeType.ACCESS, duration, distance))
 
     if no_toll_free_access_count:
         logger.info(
@@ -544,30 +546,3 @@ def add_access_edges(
         )
 
     return origin_node, destination_node
-
-
-def _osrm_route(
-    client: httpx.Client,
-    origin: tuple[float, float],
-    destination: tuple[float, float],
-    exclude_toll: bool = False,
-) -> dict | None:
-    """Returns None (not an exception) when OSRM reports NoRoute - a toll-free
-    route genuinely doesn't exist between some point pairs (e.g. a gate that
-    can only be reached via a tolled segment even locally), and the spec's
-    "missing edges: silently omitted, gap logged" convention applies here
-    the same way it does to the toll-free gate-to-gate matrix in build_graph.
-    """
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
-    params = "overview=false"
-    if exclude_toll:
-        params += "&exclude=toll"
-    resp = client.get(f"/route/v1/car/{o_lon},{o_lat};{d_lon},{d_lat}?{params}")
-    data = resp.json()
-    if data.get("code") == "NoRoute":
-        return None
-    resp.raise_for_status()
-    if data["code"] != "Ok":
-        raise RuntimeError(f"OSRM /route failed for {origin}->{destination}: {data}")
-    return data["routes"][0]
