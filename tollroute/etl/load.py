@@ -16,6 +16,8 @@ import logging
 import sqlite3
 from pathlib import Path
 
+from tollroute.cost import seed_class_config
+
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -166,6 +168,7 @@ def run(
 
         gate_count = load_gates(conn, gare_master_path)
         fare_count, zero_price_count = load_fares(conn, od_pairs_path)
+        seed_class_config(conn)
         conn.commit()
 
         (db_fare_count,) = conn.execute("SELECT COUNT(*) FROM fares").fetchone()
