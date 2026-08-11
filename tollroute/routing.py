@@ -69,33 +69,35 @@ def _build_sparse(graph: Graph) -> tuple[csr_matrix, dict[tuple[int, int], Edge]
     return matrix, best_edge
 
 
-def find_route(graph: Graph, origin: Node, destination: Node, vehicle_class: int) -> Route:
-    """Shortest (by duration) path from origin to destination, with toll,
-    duration and distance accumulated separately from the predecessor chain.
+def route_from_predecessors(
+    graph: Graph,
+    edge_lookup: dict[tuple[int, int], Edge],
+    predecessors,
+    origin: Node,
+    origin_idx: int,
+    dest_idx: int,
+    vehicle_class: int,
+) -> Route:
+    """Re-walks a scipy `dijkstra(..., return_predecessors=True)` predecessor
+    array from `dest_idx` back to `origin_idx`, accumulating toll/duration/
+    distance from each edge on the path.
+
+    Public (not `find_route`-private) because Phase 4a's Pareto VoT sweep
+    (`tollroute/pareto.py`) re-runs Dijkstra against a generalised-cost
+    weighting rather than `duration_s`, but needs the exact same walk-back
+    and toll/time/distance accumulation this function already does - sharing
+    it means the two weightings can never silently diverge in how a route's
+    totals are computed.
     """
-    if vehicle_class not in (1, 2, 3, 4, 5):
-        raise ValueError(f"vehicle_class must be 1-5, got {vehicle_class}")
-
-    matrix, edge_lookup = _build_sparse(graph)
-    origin_idx = graph.node_index[origin]
-    dest_idx = graph.node_index[destination]
-
-    if origin_idx == dest_idx:
-        return Route(nodes=[origin], edges=[], toll_eur=0.0, duration_s=0.0, distance_m=0.0)
-
-    _dist, predecessors = dijkstra(
-        matrix, directed=True, indices=origin_idx, return_predecessors=True
-    )
-
     if predecessors[dest_idx] < 0:
-        raise RouteNotFoundError(f"no path from {origin} to {destination}")
+        raise RouteNotFoundError(f"no path from {origin} to {graph.nodes[dest_idx]}")
 
     path_indices = [dest_idx]
     current = dest_idx
     while current != origin_idx:
         prev = predecessors[current]
         if prev < 0:
-            raise RouteNotFoundError(f"no path from {origin} to {destination}")
+            raise RouteNotFoundError(f"no path from {origin} to {graph.nodes[dest_idx]}")
         path_indices.append(prev)
         current = prev
     path_indices.reverse()
@@ -114,3 +116,26 @@ def find_route(graph: Graph, origin: Node, destination: Node, vehicle_class: int
             toll_eur += edge.toll_eur[vehicle_class]
 
     return Route(nodes=nodes, edges=edges, toll_eur=toll_eur, duration_s=duration_s, distance_m=distance_m)
+
+
+def find_route(graph: Graph, origin: Node, destination: Node, vehicle_class: int) -> Route:
+    """Shortest (by duration) path from origin to destination, with toll,
+    duration and distance accumulated separately from the predecessor chain.
+    """
+    if vehicle_class not in (1, 2, 3, 4, 5):
+        raise ValueError(f"vehicle_class must be 1-5, got {vehicle_class}")
+
+    matrix, edge_lookup = _build_sparse(graph)
+    origin_idx = graph.node_index[origin]
+    dest_idx = graph.node_index[destination]
+
+    if origin_idx == dest_idx:
+        return Route(nodes=[origin], edges=[], toll_eur=0.0, duration_s=0.0, distance_m=0.0)
+
+    _dist, predecessors = dijkstra(
+        matrix, directed=True, indices=origin_idx, return_predecessors=True
+    )
+
+    return route_from_predecessors(
+        graph, edge_lookup, predecessors, origin, origin_idx, dest_idx, vehicle_class
+    )
