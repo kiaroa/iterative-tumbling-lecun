@@ -68,11 +68,19 @@ def build_edge_arrays(graph: Graph, vehicle_class: int) -> EdgeArrays:
     four-role node split), so no two distinct edges should ever share an
     (i, j) key; "keep last seen" on a colliding key is a defensive fallback,
     not a path this graph is expected to exercise.
+
+    Reads each edge's `from_idx`/`to_idx` (cached once by `Graph.add_edge` at
+    graph-construction time, Phase 4c-follow-up-2) rather than re-resolving
+    them via `graph.node_index[edge.from_node]`/`[to_node]` - the latter costs
+    a `Node`-dataclass hash/eq per lookup, ~1.8M of them over the national
+    graph's ~900k edges, and was the dominant remaining cost of this function
+    (~0.72 s, profiled) after Phase 4c-follow-up cut the redundant per-request
+    rebuild count from 3x to 1x.
     """
     edge_lookup: dict[tuple[int, int], Edge] = {}
     for edge in graph.edges:
-        i = graph.node_index[edge.from_node]
-        j = graph.node_index[edge.to_node]
+        i = edge.from_idx if edge.from_idx >= 0 else graph.node_index[edge.from_node]
+        j = edge.to_idx if edge.to_idx >= 0 else graph.node_index[edge.to_node]
         edge_lookup[(i, j)] = edge
 
     m = len(edge_lookup)

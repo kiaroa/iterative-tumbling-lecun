@@ -94,6 +94,14 @@ class Edge:
     distance_m: float
     operator: str | None = None
     toll_eur: dict[int, float] | None = None  # vehicle class -> price; TOLL edges only
+    # Cached `graph.node_index[from_node]`/`[to_node]`, resolved once by
+    # `Graph.add_edge` at construction time (Phase 4c-follow-up-2) so
+    # `routing.build_edge_arrays` never needs to re-hash the frozen `Node`
+    # dataclass on every request. -1 for edges built directly via `Edge(...)`
+    # outside `Graph.add_edge` (e.g. response-shaping unit tests that never
+    # reach `build_edge_arrays`).
+    from_idx: int = -1
+    to_idx: int = -1
 
 
 @dataclass
@@ -111,6 +119,35 @@ class Graph:
             self.node_index[node] = len(self.nodes)
             self.nodes.append(node)
         return self.node_index[node]
+
+    def add_edge(
+        self,
+        from_node: Node,
+        to_node: Node,
+        edge_type: EdgeType,
+        duration_s: float,
+        distance_m: float,
+        operator: str | None = None,
+        toll_eur: dict[int, float] | None = None,
+    ) -> Edge:
+        """Builds and appends an `Edge`, resolving `from_idx`/`to_idx` from
+        `node_index` once here rather than leaving every later Dijkstra
+        request to re-resolve them (see `Edge.from_idx`/`to_idx`). Both nodes
+        must already be registered via `add_node`.
+        """
+        edge = Edge(
+            from_node=from_node,
+            to_node=to_node,
+            edge_type=edge_type,
+            duration_s=duration_s,
+            distance_m=distance_m,
+            operator=operator,
+            toll_eur=toll_eur,
+            from_idx=self.node_index[from_node],
+            to_idx=self.node_index[to_node],
+        )
+        self.edges.append(edge)
+        return edge
 
 
 def _gate_rows(conn: sqlite3.Connection) -> list[tuple[int, float, float]]:
@@ -234,11 +271,9 @@ def build_graph(
         out_toll_node = Node(gid, NodeRole.OUT_TOLL)
         for node in (in_node, out_node, in_toll_node, out_toll_node):
             graph.add_node(node)
-        graph.edges.append(
-            Edge(in_node, out_node, EdgeType.DWELL, DWELL_DURATION_S, DWELL_DISTANCE_M)
-        )
-        graph.edges.append(
-            Edge(in_toll_node, out_toll_node, EdgeType.DWELL, DWELL_DURATION_S, DWELL_DISTANCE_M)
+        graph.add_edge(in_node, out_node, EdgeType.DWELL, DWELL_DURATION_S, DWELL_DISTANCE_M)
+        graph.add_edge(
+            in_toll_node, out_toll_node, EdgeType.DWELL, DWELL_DURATION_S, DWELL_DISTANCE_M
         )
     dwell_edge_count = 2 * n
 
@@ -274,16 +309,14 @@ def build_graph(
             # every TOLL edge regardless of duration/distance, so this is a
             # genuinely priced edge (OUT -> IN_TOLL of the same gate), not a
             # dropped or degenerate one.
-            graph.edges.append(
-                Edge(
-                    Node(from_id, NodeRole.OUT),
-                    Node(to_id, NodeRole.IN_TOLL),
-                    EdgeType.TOLL,
-                    0.0,
-                    0.0,
-                    operator=operator,
-                    toll_eur={1: c1, 2: c2, 3: c3, 4: c4, 5: c5},
-                )
+            graph.add_edge(
+                Node(from_id, NodeRole.OUT),
+                Node(to_id, NodeRole.IN_TOLL),
+                EdgeType.TOLL,
+                0.0,
+                0.0,
+                operator=operator,
+                toll_eur={1: c1, 2: c2, 3: c3, 4: c4, 5: c5},
             )
             freeflow_selfloop_count += 1
             toll_edge_count += 1
@@ -302,16 +335,14 @@ def build_graph(
         else:
             duration_s, distance_m = float(duration_s), float(distance_m)
 
-        graph.edges.append(
-            Edge(
-                Node(from_id, NodeRole.OUT),
-                Node(to_id, NodeRole.IN_TOLL),
-                EdgeType.TOLL,
-                duration_s,
-                distance_m,
-                operator=operator,
-                toll_eur={1: c1, 2: c2, 3: c3, 4: c4, 5: c5},
-            )
+        graph.add_edge(
+            Node(from_id, NodeRole.OUT),
+            Node(to_id, NodeRole.IN_TOLL),
+            EdgeType.TOLL,
+            duration_s,
+            distance_m,
+            operator=operator,
+            toll_eur={1: c1, 2: c2, 3: c3, 4: c4, 5: c5},
         )
         toll_edge_count += 1
 
@@ -363,14 +394,12 @@ def build_graph(
                 continue
             in_node = Node(to_id, NodeRole.IN)
             for source_role in (NodeRole.OUT, NodeRole.OUT_TOLL):
-                graph.edges.append(
-                    Edge(
-                        Node(from_id, source_role),
-                        in_node,
-                        EdgeType.TOLL_FREE,
-                        float(duration_s),
-                        float(distance_m),
-                    )
+                graph.add_edge(
+                    Node(from_id, source_role),
+                    in_node,
+                    EdgeType.TOLL_FREE,
+                    float(duration_s),
+                    float(distance_m),
                 )
                 tollfree_edge_count += 1
 
@@ -441,18 +470,18 @@ def _add_transfer_edges(
         a, b = te.a_gare_id, te.b_gare_id
         if te.transfer_type is cluster_gates.TransferType.BOUNDARY:
             for src_role in (NodeRole.OUT, NodeRole.OUT_TOLL):
-                graph.edges.append(Edge(Node(a, src_role), Node(b, NodeRole.OUT), EdgeType.BOUNDARY, 0.0, 0.0))
-                graph.edges.append(Edge(Node(b, src_role), Node(a, NodeRole.OUT), EdgeType.BOUNDARY, 0.0, 0.0))
+                graph.add_edge(Node(a, src_role), Node(b, NodeRole.OUT), EdgeType.BOUNDARY, 0.0, 0.0)
+                graph.add_edge(Node(b, src_role), Node(a, NodeRole.OUT), EdgeType.BOUNDARY, 0.0, 0.0)
             boundary_edge_count += 4
         else:
             dwell_s = te.dwell_min * 60.0
             dwell_m = te.dwell_km * 1000.0
             for src_role in (NodeRole.OUT, NodeRole.OUT_TOLL):
-                graph.edges.append(
-                    Edge(Node(a, src_role), Node(b, NodeRole.IN), EdgeType.EXIT_REENTRY, dwell_s, dwell_m)
+                graph.add_edge(
+                    Node(a, src_role), Node(b, NodeRole.IN), EdgeType.EXIT_REENTRY, dwell_s, dwell_m
                 )
-                graph.edges.append(
-                    Edge(Node(b, src_role), Node(a, NodeRole.IN), EdgeType.EXIT_REENTRY, dwell_s, dwell_m)
+                graph.add_edge(
+                    Node(b, src_role), Node(a, NodeRole.IN), EdgeType.EXIT_REENTRY, dwell_s, dwell_m
                 )
             exit_reentry_edge_count += 4
 
@@ -523,9 +552,7 @@ def add_access_edges(
             no_toll_free_access_count += 1
             continue
         duration, distance = leg
-        graph.edges.append(
-            Edge(origin_node, Node(gid, NodeRole.IN), EdgeType.ACCESS, duration, distance)
-        )
+        graph.add_edge(origin_node, Node(gid, NodeRole.IN), EdgeType.ACCESS, duration, distance)
 
     for gid, leg in zip(exit_gids, exit_legs):
         if leg is None:
@@ -536,7 +563,7 @@ def add_access_edges(
             node = Node(gid, role)
             if node not in graph.node_index:
                 continue
-            graph.edges.append(Edge(node, destination_node, EdgeType.ACCESS, duration, distance))
+            graph.add_edge(node, destination_node, EdgeType.ACCESS, duration, distance)
 
     if no_toll_free_access_count:
         logger.info(
