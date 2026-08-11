@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import numpy as np
 from scipy.sparse import csr_matrix
 from scipy.sparse.csgraph import dijkstra
 
@@ -38,35 +39,60 @@ class Route:
     distance_m: float
 
 
-def _build_sparse(graph: Graph) -> tuple[csr_matrix, dict[tuple[int, int], Edge]]:
-    """Adjacency matrix weighted by duration_s, plus the Edge used for each
-    (i, j) pair so the predecessor re-walk can read back toll/distance.
-
-    Node-index pairs are unique per Edge by construction (see graph.py's
-    four-role node split), so no two distinct edges should ever share an
-    (i, j) key; the "keep cheaper duration" tie-break below is a defensive
-    fallback, not a path this graph is expected to exercise.
+@dataclass
+class EdgeArrays:
+    """The sparsity pattern (row/col indices) plus every per-edge cost
+    component `find_route` and `pareto_sweep` need, built in one pass over
+    `graph.edges` so a caller running several Dijkstra searches against the
+    same graph/vehicle_class (e.g. `response.shape_response`'s fastest +
+    10-step VoT sweep + best_value re-sweep) can build it once and reuse it,
+    instead of each independently re-walking the graph and rebuilding a
+    `dict[(i, j), Edge]` from scratch. Profiling a national-graph request
+    (Phase 4c-follow-up) found this per-edge dict/hash rebuild - not the
+    Dijkstra runs or COO->CSR conversion themselves - was the dominant cost:
+    ~2s of a ~1.8-2.7s warm `/route` response was three redundant rebuilds of
+    the same ~900k-edge structure.
     """
-    n = len(graph.nodes)
-    best_edge: dict[tuple[int, int], Edge] = {}
+
+    rows: np.ndarray
+    cols: np.ndarray
+    edge_lookup: dict[tuple[int, int], Edge]
+    duration_arr: np.ndarray
+    toll_arr: np.ndarray
+    km_arr: np.ndarray
+    hr_arr: np.ndarray
+
+
+def build_edge_arrays(graph: Graph, vehicle_class: int) -> EdgeArrays:
+    """Node-index pairs are unique per Edge by construction (see graph.py's
+    four-role node split), so no two distinct edges should ever share an
+    (i, j) key; "keep last seen" on a colliding key is a defensive fallback,
+    not a path this graph is expected to exercise.
+    """
+    edge_lookup: dict[tuple[int, int], Edge] = {}
     for edge in graph.edges:
         i = graph.node_index[edge.from_node]
         j = graph.node_index[edge.to_node]
-        key = (i, j)
-        current = best_edge.get(key)
-        if current is None or edge.duration_s < current.duration_s:
-            best_edge[key] = edge
+        edge_lookup[(i, j)] = edge
 
-    rows = []
-    cols = []
-    data = []
-    for (i, j), edge in best_edge.items():
-        rows.append(i)
-        cols.append(j)
-        data.append(edge.duration_s)
+    m = len(edge_lookup)
+    rows = np.empty(m, dtype=np.int64)
+    cols = np.empty(m, dtype=np.int64)
+    duration_arr = np.empty(m, dtype=np.float64)
+    toll_arr = np.zeros(m, dtype=np.float64)
+    km_arr = np.empty(m, dtype=np.float64)
+    hr_arr = np.empty(m, dtype=np.float64)
 
-    matrix = csr_matrix((data, (rows, cols)), shape=(n, n))
-    return matrix, best_edge
+    for idx, ((i, j), edge) in enumerate(edge_lookup.items()):
+        rows[idx] = i
+        cols[idx] = j
+        duration_arr[idx] = edge.duration_s
+        km_arr[idx] = edge.distance_m / 1000.0
+        hr_arr[idx] = edge.duration_s / 3600.0
+        if edge.edge_type == EdgeType.TOLL:
+            toll_arr[idx] = edge.toll_eur[vehicle_class]
+
+    return EdgeArrays(rows, cols, edge_lookup, duration_arr, toll_arr, km_arr, hr_arr)
 
 
 def route_from_predecessors(
@@ -118,24 +144,37 @@ def route_from_predecessors(
     return Route(nodes=nodes, edges=edges, toll_eur=toll_eur, duration_s=duration_s, distance_m=distance_m)
 
 
-def find_route(graph: Graph, origin: Node, destination: Node, vehicle_class: int) -> Route:
+def find_route(
+    graph: Graph,
+    origin: Node,
+    destination: Node,
+    vehicle_class: int,
+    edge_arrays: EdgeArrays | None = None,
+) -> Route:
     """Shortest (by duration) path from origin to destination, with toll,
     duration and distance accumulated separately from the predecessor chain.
+
+    `edge_arrays` lets a caller that's about to run several Dijkstra searches
+    against the same graph/vehicle_class (`response.shape_response`) pass in
+    an already-built `EdgeArrays` rather than have this rebuild one; omit it
+    for a one-off call, which builds it internally as before.
     """
     if vehicle_class not in (1, 2, 3, 4, 5):
         raise ValueError(f"vehicle_class must be 1-5, got {vehicle_class}")
 
-    matrix, edge_lookup = _build_sparse(graph)
+    ea = edge_arrays if edge_arrays is not None else build_edge_arrays(graph, vehicle_class)
     origin_idx = graph.node_index[origin]
     dest_idx = graph.node_index[destination]
 
     if origin_idx == dest_idx:
         return Route(nodes=[origin], edges=[], toll_eur=0.0, duration_s=0.0, distance_m=0.0)
 
+    n = len(graph.nodes)
+    matrix = csr_matrix((ea.duration_arr, (ea.rows, ea.cols)), shape=(n, n))
     _dist, predecessors = dijkstra(
         matrix, directed=True, indices=origin_idx, return_predecessors=True
     )
 
     return route_from_predecessors(
-        graph, edge_lookup, predecessors, origin, origin_idx, dest_idx, vehicle_class
+        graph, ea.edge_lookup, predecessors, origin, origin_idx, dest_idx, vehicle_class
     )

@@ -54,7 +54,7 @@ from dataclasses import dataclass
 from tollroute.cost import ClassConfig, generalised_cost
 from tollroute.graph import EdgeType, Graph, Node
 from tollroute.pareto import pareto_sweep
-from tollroute.routing import Route, find_route
+from tollroute.routing import Route, build_edge_arrays, find_route
 
 MAX_GATE_HOPS = 5
 MIN_DETOUR_KM = 10.0
@@ -221,9 +221,21 @@ def shape_response(
     cfg = class_config[vehicle_class]
     vot = vot_threshold if vot_threshold is not None else cfg.value_of_time_eur_per_hour
 
-    fastest_route = find_route(graph, origin, destination, vehicle_class)
+    # Built once and reused for the fastest search plus both sweeps below
+    # (Phase 4c-follow-up): each independently rebuilding this ~900k-edge
+    # sparsity pattern/cost-component structure - not the Dijkstra runs
+    # themselves - was measured as the dominant cost of a national warm
+    # `/route` response.
+    edge_arrays = build_edge_arrays(graph, vehicle_class)
 
-    swept = [r.route for r in pareto_sweep(graph, origin, destination, vehicle_class, class_config)]
+    fastest_route = find_route(graph, origin, destination, vehicle_class, edge_arrays=edge_arrays)
+
+    swept = [
+        r.route
+        for r in pareto_sweep(
+            graph, origin, destination, vehicle_class, class_config, edge_arrays=edge_arrays
+        )
+    ]
     frontier = dedupe_by_gate_chain(swept)
 
     cheapest_route = min(frontier, key=lambda r: r.toll_eur)
@@ -231,7 +243,7 @@ def shape_response(
     best_value_route = min(
         pareto_sweep(
             graph, origin, destination, vehicle_class, class_config,
-            vot_min=vot, vot_max=vot, steps=1,
+            vot_min=vot, vot_max=vot, steps=1, edge_arrays=edge_arrays,
         ),
         key=lambda r: generalised_cost(
             r.route.toll_eur, r.route.distance_m, r.route.duration_s, cfg.running_cost_per_km, vot
