@@ -53,7 +53,7 @@ from dataclasses import dataclass
 
 from tollroute.cost import ClassConfig, generalised_cost
 from tollroute.graph import EdgeType, Graph, Node
-from tollroute.pareto import pareto_sweep
+from tollroute.pareto import build_csr_reuse_plan, pareto_sweep
 from tollroute.routing import Route, build_edge_arrays, find_route
 
 MAX_GATE_HOPS = 5
@@ -228,12 +228,19 @@ def shape_response(
     # `/route` response.
     edge_arrays = build_edge_arrays(graph, vehicle_class)
 
+    # Likewise built once and reused for both pareto_sweep calls below
+    # (Phase 4c-follow-up-5): both sweeps share edge_arrays' `(rows, cols)`
+    # and the same node count, so they'd otherwise each rebuild an identical
+    # CSR reuse plan for no reason.
+    reuse_plan = build_csr_reuse_plan(edge_arrays.rows, edge_arrays.cols, len(graph.nodes))
+
     fastest_route = find_route(graph, origin, destination, vehicle_class, edge_arrays=edge_arrays)
 
     swept = [
         r.route
         for r in pareto_sweep(
-            graph, origin, destination, vehicle_class, class_config, edge_arrays=edge_arrays
+            graph, origin, destination, vehicle_class, class_config,
+            edge_arrays=edge_arrays, reuse_plan=reuse_plan,
         )
     ]
     frontier = dedupe_by_gate_chain(swept)
@@ -243,7 +250,7 @@ def shape_response(
     best_value_route = min(
         pareto_sweep(
             graph, origin, destination, vehicle_class, class_config,
-            vot_min=vot, vot_max=vot, steps=1, edge_arrays=edge_arrays,
+            vot_min=vot, vot_max=vot, steps=1, edge_arrays=edge_arrays, reuse_plan=reuse_plan,
         ),
         key=lambda r: generalised_cost(
             r.route.toll_eur, r.route.distance_m, r.route.duration_s, cfg.running_cost_per_km, vot
