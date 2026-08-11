@@ -18,7 +18,7 @@ We hold two datasets — a 57,378-row fare matrix and a 956-row geocoded toll-ga
 | `gare_master.csv` | 956 | Deduplicated, geocoded toll gates (953 have lat/lon; 815 distinct physical points) |
 
 Key facts:
-- 13 operators, dirty casing (`sanef`/`ASFC`/`escota`/`aliea`). APRR 21,349 rows; ASFC 18,516; Cofiroute 10,936.
+- 13 operators, dirty casing (`sanef`/`ASFC`/`escota`/`aliea`). APRR 21,349 rows; ASFC 18,516 (= ASF, Autoroutes du Sud de la France); Cofiroute 10,936.
 - `distance_km` filled for only 39% of rows (APRR/AREA/aliea only).
 - 26,265 rows are **cross-route** — not a per-motorway table.
 - 5 rows carry time bands (sapn open barriers).
@@ -37,6 +37,8 @@ Any road in France may be used — the service is not limited to motorways.
 **Graph:** nodes = {origin, destination, ~956 gates} ≈ 1,900. Edges = 57k toll edges + toll-free gate-to-gate edges + access edges. All geometry from OSRM; Python never touches a road segment.
 
 **Node-split:** each gate splits into `_in`/`_out` with a dwell edge (3 min, 0.5 km — calibrated in Phase 1c). Co-located gates from different operators get a free boundary transfer edge (no physical stop). Boundary detection is Phase 2c; Phase 1 is APRR-only so this does not apply.
+
+**Same-operator toll-edge chaining is forbidden via the dwell edge.** Toll edges carry an `operator` label. The exit/re-entry dwell edge occurs at a single physical gate, so both sides are necessarily the same operator — chaining two toll edges through it would let Dijkstra invent a fictitious stop purely to exploit a fare-table gap (e.g. `toll(A,B) + toll(B,C) < toll(A,C)` from a data artefact), producing an unrealistic recommendation. The dwell edge is therefore excluded as a toll-edge connector entirely, from Phase 1c onward — even though this is vacuous while Phase 1 is single-operator, the rule is implemented from the start so Phase 2c's multi-operator graph inherits it unchanged. A same-operator split route remains reachable via a **genuine toll-free detour** (real distance/time between two different gates of the same operator, e.g. leaving the motorway for services and rejoining further on) — this is a real drivable route, so it is allowed, but flagged in the Phase 4b API response as `same_operator_split: true` rather than silently offered as an optimisation. *Conjecture: this pattern is known in France as "fractionnement" and can be a genuine legal saving in some cases, which is why it is flagged rather than banned outright.*
 
 **Vehicle classes:** one graph structure, one `data` array per class. Class selected at query time by swapping the array.
 
@@ -127,15 +129,15 @@ Rejected for now: Postgres/PostGIS, Redis, Celery, any ORM, networkx.
 **Objective.** Working Dijkstra over the overlay graph; CLI returns a route.
 
 **Deliverables.**
-- Overlay graph builder: directed, APRR toll edges + toll-free gate-to-gate edges + origin/destination access edges. Dwell edge per gate: 3 min, 0.5 km.
+- Overlay graph builder: directed, APRR toll edges + toll-free gate-to-gate edges + origin/destination access edges. Dwell edge per gate: 3 min, 0.5 km. Toll edges carry an `operator` label; the dwell edge is excluded as a toll-edge connector (never used to chain two toll edges together — see Core architectural decision). Vacuous while APRR-only, but implemented now so Phase 2c inherits it unchanged.
 - `scipy.sparse.csgraph.dijkstra` with predecessor re-walk to accumulate toll/time/distance separately.
 - CLI: `python3 -m tollroute dijon lyon --class 1` returns at least one route with toll cost, duration, distance.
 
-**Exit criterion.** CLI runs without error for all 5 test pairs; at least one route returned per pair; predecessor re-walk produces separate toll/time/distance totals.
+**Exit criterion.** CLI runs without error for all 5 test pairs; at least one route returned per pair; predecessor re-walk produces separate toll/time/distance totals; no returned route chains two toll edges via the dwell edge.
 
 **ralph-loop:**
 ```
-/ralph-loop "Implement Phase 1c of the toll routing service per iterative-tumbling-lecun.md. Build directed overlay graph for APRR: toll edges from od_pairs, toll-free gate-to-gate edges from OSRM, origin/destination access edges. Dwell edge per gate: 3 min 0.5 km. Run scipy Dijkstra, re-walk predecessor path to accumulate toll/time/distance separately. CLI: python3 -m tollroute <origin> <dest> --class 1. Test against all 5 named pairs." --completion-promise "PHASE_1C_COMPLETE" --max-iterations 6
+/ralph-loop "Implement Phase 1c of the toll routing service per iterative-tumbling-lecun.md. Build directed overlay graph for APRR: toll edges from od_pairs (each labelled with operator), toll-free gate-to-gate edges from OSRM, origin/destination access edges. Dwell edge per gate: 3 min 0.5 km, excluded as a toll-edge connector (never chains two toll edges together, regardless of operator - this rule is implemented now even though Phase 1 is single-operator, so Phase 2c inherits it unchanged). Run scipy Dijkstra, re-walk predecessor path to accumulate toll/time/distance separately. CLI: python3 -m tollroute <origin> <dest> --class 1. Test against all 5 named pairs. Verify no returned route chains two toll edges via the dwell edge." --completion-promise "PHASE_1C_COMPLETE" --max-iterations 6
 ```
 
 ---
@@ -199,7 +201,7 @@ Rejected for now: Postgres/PostGIS, Redis, Celery, any ORM, networkx.
 
 **Deliverables.**
 - Physical-gate clustering: 953 geocoded gates → ~815 points, within ~100 m. Produces `physical_gate_id ↔ gare_id` lookup.
-- Transfer edge typing: `boundary` (free, zero-time) = coordinate co-location within ~100 m AND different operator; `exit_reentry` (3 min, 0.5 km dwell). High-traffic cross-operator pairs (ABLIS = ASFC id 4 + Cofiroute id 5) manually verified.
+- Transfer edge typing: `boundary` (free, zero-time) = coordinate co-location within ~100 m AND different operator; `exit_reentry` (3 min, 0.5 km dwell). High-traffic cross-operator pairs (ABLIS = ASFC id 4 + Cofiroute id 5) manually verified. `boundary` edges are the only permitted connector between two different-operator toll edges; `exit_reentry` remains excluded as a toll-edge connector per Phase 1c (both sides of a physical gate share an operator, so it would always be same-operator chaining).
 - **Free-flow detection (A79, A13/A14):** check whether affected gates appear in `gare_master`; check if their `od_pairs` rows are structurally different. If absent from fare matrix, add per-corridor flat-fee override table.
 - 3 gates without coordinates: geocode or move to `suspect_gates`.
 
@@ -217,7 +219,7 @@ Rejected for now: Postgres/PostGIS, Redis, Celery, any ORM, networkx.
 **Objective.** Clean operator names; quantify routing coverage per operator.
 
 **Deliverables.**
-- Operator normalisation: casefold + alias map in SQLite. *Conjecture: ASFC = ASF; `aliea` may be mis-cased.*
+- Operator normalisation: casefold + alias map in SQLite. **Confirmed: ASFC = ASF (Autoroutes du Sud de la France).** *Conjecture: `aliea` may be mis-cased.*
 - **Per-operator coverage audit:** distinct gates N vs row count vs dense N(N−1). Operators materially below dense are correctness hazards — logged as known-bad regions.
 - **Asymmetric pricing (426 rows, 0.7%):** keep as-is (directed graph handles it). Flag pairs where ratio exceeds 2× as likely data errors.
 - Gate snapping failures >200 m after curation: moved to `suspect_gates` table, excluded from graph, logged with affected OD pair count.
@@ -308,7 +310,7 @@ Rejected for now: Postgres/PostGIS, Redis, Celery, any ORM, networkx.
 **Objective.** API returns a structured, filtered, cached Pareto frontier.
 
 **Deliverables.**
-- Response: options labelled `fastest`, `cheapest`, `best_value`, plus surviving Pareto points. Each carries `saving_vs_fastest_eur`, `extra_minutes`, `extra_km`, `eur_per_hour_saved`.
+- Response: options labelled `fastest`, `cheapest`, `best_value`, plus surviving Pareto points. Each carries `saving_vs_fastest_eur`, `extra_minutes`, `extra_km`, `eur_per_hour_saved`, `same_operator_split` (true if the route chains two same-operator toll edges via a genuine toll-free detour rather than the forbidden dwell connector — see Core architectural decision).
 - Worthwhile filter: config-table default VoT threshold per class, overridable per request. Applied on top of frontier, not in the search.
 - Guard rails enforced: `max_gate_hops = 5`; minimum detour ≥10 km AND ≥5 min.
 - `match_tier` (direct / rematched / suspect) and `match_agreement` (snap distance ÷ 200 m threshold) on each option.
@@ -318,7 +320,7 @@ Rejected for now: Postgres/PostGIS, Redis, Celery, any ORM, networkx.
 
 **ralph-loop:**
 ```
-/ralph-loop "Implement Phase 4b of the toll routing service per iterative-tumbling-lecun.md. Structure response with fastest/cheapest/best_value labels plus Pareto points. Each option: saving_vs_fastest_eur, extra_minutes, extra_km, eur_per_hour_saved, match_tier, match_agreement. Worthwhile filter from config per class, overridable per request. Enforce max_gate_hops=5 and min detour >=10km AND >=5min. Cache keyed on (snapped_entry_gate_id, snapped_exit_gate_id, class, VoT_bucket)." --completion-promise "PHASE_4B_COMPLETE" --max-iterations 6
+/ralph-loop "Implement Phase 4b of the toll routing service per iterative-tumbling-lecun.md. Structure response with fastest/cheapest/best_value labels plus Pareto points. Each option: saving_vs_fastest_eur, extra_minutes, extra_km, eur_per_hour_saved, match_tier, match_agreement, same_operator_split (true if the route chains two same-operator toll edges via a genuine toll-free detour). Worthwhile filter from config per class, overridable per request. Enforce max_gate_hops=5 and min detour >=10km AND >=5min. Cache keyed on (snapped_entry_gate_id, snapped_exit_gate_id, class, VoT_bucket)." --completion-promise "PHASE_4B_COMPLETE" --max-iterations 6
 ```
 
 ---
@@ -438,7 +440,7 @@ Rejected for now: Postgres/PostGIS, Redis, Celery, any ORM, networkx.
 3. **Fare-matrix provenance.** Phase 2a investigates. A machine-readable authoritative source would de-risk the entire data layer.
 4. **Gate snapping to wrong carriageways.** Detectable — snap-distance report converts silent errors into a work list.
 5. **Free-flow tolling (A79, A13/A14).** Phase 2c detects; per-corridor override table is the mitigation.
-6. **Exit/re-entry artefacts.** Guard rails reduce them; Phase 5b validation distinguishes genuine from artefact.
+6. **Exit/re-entry artefacts.** Guard rails reduce them; the same-operator dwell-chaining ban (Core architectural decision) removes the worst class outright; Phase 5b validation distinguishes remaining genuine cases from artefact.
 
 ---
 

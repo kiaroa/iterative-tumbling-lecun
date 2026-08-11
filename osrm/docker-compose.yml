@@ -2,10 +2,13 @@
 # docker daemon resolves bind-mount sources against the *host* filesystem, not this
 # container's /workspace. ${OSRM_DATA_DIR} must be set to the host-side absolute path of
 # this osrm/data directory (see README.md for how to find it) before `docker compose up`.
+#
+# OSRM_NETWORK selects which built extract to serve: `france` (Phase 3a national build,
+# the default) or `bfc-ara` (Phase 1a regional extract). Only one can bind :5000 at a time.
 services:
   osrm-routed:
     image: ghcr.io/project-osrm/osrm-backend:latest
-    command: osrm-routed --algorithm mld /data/bfc-ara.osrm
+    command: osrm-routed --algorithm mld /data/${OSRM_NETWORK:-france}.osrm
     volumes:
       - ${OSRM_DATA_DIR}:/data
     ports:
