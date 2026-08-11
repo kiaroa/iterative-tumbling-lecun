@@ -120,12 +120,15 @@ def _gate_rows(conn: sqlite3.Connection) -> list[tuple[int, float, float]]:
 OSRM_TABLE_MAX_DIMENSION = 100
 
 
-def _osrm_table(
+def osrm_table(
     client: httpx.Client, coords: list[tuple[float, float]], exclude_toll: bool
 ) -> tuple[list[list[float | None]], list[list[float | None]]]:
     """Full N x N duration+distance matrices, tiled into <=100x100 OSRM /table calls.
 
     `coords` is a list of (lat, lon); OSRM's own wire format is lon,lat.
+    Public because Phase 3b's national 815x815 matrix precompute
+    (`tollroute/matrices.py`) reuses the same tiling logic rather than
+    duplicating it.
     """
     n = len(coords)
     locations = ";".join(f"{lon},{lat}" for lat, lon in coords)
@@ -172,8 +175,8 @@ def build_graph(conn: sqlite3.Connection, osrm_client: httpx.Client) -> Graph:
 
     logger.info("building overlay graph for %d snapped APRR gates", n)
 
-    tolled_durations, tolled_distances = _osrm_table(osrm_client, coords, exclude_toll=False)
-    tollfree_durations, tollfree_distances = _osrm_table(osrm_client, coords, exclude_toll=True)
+    tolled_durations, tolled_distances = osrm_table(osrm_client, coords, exclude_toll=False)
+    tollfree_durations, tollfree_distances = osrm_table(osrm_client, coords, exclude_toll=True)
 
     graph = Graph(gate_coords={gid: (lat, lon) for gid, (lat, lon) in zip(gare_ids, coords)})
 
