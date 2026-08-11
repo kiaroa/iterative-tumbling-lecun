@@ -75,6 +75,40 @@ CREATE TABLE IF NOT EXISTS operator_alias (
     canonical_operator TEXT NOT NULL
 );
 
+-- Gates quarantined out of the routing graph (spec: the "suspect_gates" table referenced
+-- by Phases 2c, 2d and 3c). Populated incrementally by each phase's curation step:
+--   Phase 2c (tollroute/etl/freeflow.py): coordinate-less gates.
+--   Phase 2d (coverage audit): gates snapping >200 m from any road.
+--   Phase 3c (snap-quality): unresolvable snaps / >20% OSRM-vs-distance_km deviation.
+-- affected_od_pairs records how many od_pairs fare rows reference the gate, so the cost of
+-- excluding it is visible (spec: "logged with affected OD pair count").
+-- Deliberately NO foreign key to gates(gare_id): the canonical gates table is built
+-- operator-filtered until the Phase 2d national build, so a suspect gate may be absent from
+-- it, and an FK would couple load order (DELETE FROM gates would fail while suspect rows
+-- reference it). The exclusion list must survive independently of the gates table.
+CREATE TABLE IF NOT EXISTS suspect_gates (
+    gare_id           INTEGER PRIMARY KEY,
+    canonical_name    TEXT,
+    reason            TEXT NOT NULL,
+    source_phase      TEXT NOT NULL,
+    affected_od_pairs INTEGER NOT NULL DEFAULT 0,
+    detail            TEXT
+);
+
+-- Per-corridor flat-fee override for free-flow (barrierless) tolling, where a corridor's
+-- fares are ABSENT from od_pairs (spec Phase 2c: "If absent from fare matrix, add per-corridor
+-- flat-fee override table"). Structure only; intentionally EMPTY at Phase 2c because the
+-- free-flow audit (tollroute/etl/freeflow.py) found A79, A13 and A14 all present in od_pairs,
+-- so no override is required yet. Ready for a future free-flow corridor genuinely missing its
+-- fares (one row per corridor per vehicle class).
+CREATE TABLE IF NOT EXISTS freeflow_override (
+    corridor      TEXT NOT NULL,
+    vehicle_class INTEGER NOT NULL,
+    flat_fee_eur  REAL NOT NULL,
+    note          TEXT,
+    PRIMARY KEY (corridor, vehicle_class)
+);
+
 -- Per-vehicle-class generalised-cost defaults (Phase 4a: G = toll + km*running_cost_per_km
 -- + hours*value_of_time_eur_per_hour). Populated by Phase 4a, not this scaffold; structure
 -- only. is_conjecture flags figures not yet sourced from DGITM/EU data.
