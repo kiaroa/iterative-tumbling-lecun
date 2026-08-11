@@ -200,6 +200,7 @@ def build_graph(conn: sqlite3.Connection, osrm_client: httpx.Client) -> Graph:
     toll_edge_count = 0
     no_coords_count = 0
     no_osrm_route_count = 0
+    freeflow_selfloop_count = 0
     for from_id, to_id, operator, c1, c2, c3, c4, c5, distance_km in fare_rows:
         if from_id not in gate_position or to_id not in gate_position:
             # References a gate with no lat/lon (e.g. CHARMONT) - can't be
@@ -208,6 +209,34 @@ def build_graph(conn: sqlite3.Connection, osrm_client: httpx.Client) -> Graph:
             # job; here the edge is just logged as skipped, not dropped
             # silently.
             no_coords_count += 1
+            continue
+
+        if from_id == to_id:
+            # Free-flow (barrierless) single-gantry flat fee (Phase 2c
+            # finding: A14's 5 fare rows are self-loops, e.g. gate 547
+            # "PEAGE DE MONTESSON"). There is no second endpoint to derive a
+            # driven distance/time from - the gantry charges on pass-through,
+            # not across a mapped entry->exit span - so the section is
+            # priced at zero physical distance/duration rather than routed
+            # through OSRM or the distance_km/FALLBACK_SPEED_KMH detour
+            # fallback below (both of which assume two distinct points).
+            # The fee still applies in full: routing.py sums toll_eur on
+            # every TOLL edge regardless of duration/distance, so this is a
+            # genuinely priced edge (OUT -> IN_TOLL of the same gate), not a
+            # dropped or degenerate one.
+            graph.edges.append(
+                Edge(
+                    Node(from_id, NodeRole.OUT),
+                    Node(to_id, NodeRole.IN_TOLL),
+                    EdgeType.TOLL,
+                    0.0,
+                    0.0,
+                    operator=operator,
+                    toll_eur={1: c1, 2: c2, 3: c3, 4: c4, 5: c5},
+                )
+            )
+            freeflow_selfloop_count += 1
+            toll_edge_count += 1
             continue
 
         i, j = gate_position[from_id], gate_position[to_id]
@@ -242,6 +271,12 @@ def build_graph(conn: sqlite3.Connection, osrm_client: httpx.Client) -> Graph:
             "%.0f km/h fallback instead",
             no_osrm_route_count,
             FALLBACK_SPEED_KMH,
+        )
+    if freeflow_selfloop_count:
+        logger.info(
+            "%d toll edges are free-flow single-gantry self-loops (e.g. A14); "
+            "priced at zero physical distance/duration",
+            freeflow_selfloop_count,
         )
 
     tollfree_edge_count = 0
