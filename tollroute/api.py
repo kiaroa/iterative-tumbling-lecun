@@ -35,7 +35,7 @@ from tollroute import graph as graph_mod
 from tollroute import response as response_mod
 from tollroute import routing
 from tollroute.cli import GAZETTEER
-from tollroute.etl.load import DEFAULT_DB_PATH
+from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH as DEFAULT_DB_PATH
 from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
 
 ROUTE_CACHE_MAXSIZE = 512
@@ -45,8 +45,7 @@ ROUTE_CACHE_MAXSIZE = 512
 async def lifespan(app: FastAPI):
     conn = sqlite3.connect(DEFAULT_DB_PATH)
     try:
-        with httpx.Client(base_url=DEFAULT_OSRM_BASE_URL, timeout=30.0) as build_client:
-            app.state.graph = graph_mod.build_graph(conn, build_client)
+        app.state.graph = graph_mod.build_graph(conn)
         # Idempotent (only inserts when class_config is empty - see
         # tollroute/cost.py): dev DBs built before Phase 4a's loader change
         # never got seeded, and re-running the full loader here would wipe

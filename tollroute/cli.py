@@ -2,9 +2,9 @@
 
 Usage: python3 -m tollroute <origin city> <destination city> --class 1
 
-Builds the full APRR overlay graph, adds per-query origin/destination access
-edges via OSRM, then runs Dijkstra and prints toll/duration/distance for the
-result plus the gate chain used.
+Builds the national multi-operator overlay graph, adds per-query origin/
+destination access edges via OSRM, then runs Dijkstra and prints toll/
+duration/distance for the result plus the gate chain used.
 """
 
 from __future__ import annotations
@@ -18,15 +18,15 @@ import httpx
 
 from tollroute import graph as graph_mod
 from tollroute import routing
-from tollroute.etl.load import DEFAULT_DB_PATH
+from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH as DEFAULT_DB_PATH
 from tollroute.etl.snap_report import CLERMONT_FERRAND, DEFAULT_OSRM_BASE_URL, MONTPELLIER
 
 logger = logging.getLogger(__name__)
 
-# City-centre coordinates covering the 5 named Phase 1b/1c test pairs
-# (iterative-tumbling-lecun.md). This is a small fixed gazetteer, not a
-# general geocoder - Phase 6b adds free-text geocoding on top of the
-# (unchanged) routing core this CLI drives.
+# City-centre coordinates covering the 5 named Phase 1b/1c test pairs plus
+# Phase 4b's national multi-operator exit-criterion pair (Lille/Marseille).
+# This is a small fixed gazetteer, not a general geocoder - Phase 6b adds
+# free-text geocoding on top of the (unchanged) routing core this CLI drives.
 GAZETTEER: dict[str, tuple[float, float]] = {
     "dijon": (47.3220, 5.0415),
     "lyon": (45.7640, 4.8357),
@@ -37,6 +37,8 @@ GAZETTEER: dict[str, tuple[float, float]] = {
     "villefranche": (45.9895, 4.7178),
     "clermont-ferrand": CLERMONT_FERRAND,
     "montpellier": MONTPELLIER,
+    "lille": (50.6292, 3.0573),
+    "marseille": (43.2965, 5.3698),
 }
 
 
@@ -64,8 +66,8 @@ def run(
 
     conn = sqlite3.connect(db_path)
     try:
+        g = graph_mod.build_graph(conn)
         with httpx.Client(base_url=osrm_base_url, timeout=30.0) as client:
-            g = graph_mod.build_graph(conn, client)
             origin_node, dest_node = graph_mod.add_access_edges(
                 g, client, origin_coords, dest_coords
             )

@@ -71,6 +71,39 @@ def test_route_endpoint_accepts_vot_override():
 
 
 @requires_osrm
+def test_route_endpoint_serves_national_multi_operator_pair():
+    # Phase 4b's named exit criterion (Lille -> Marseille) is only servable
+    # once the API is wired to the national (all-operator) DB with Phase 2c's
+    # transfer edges - this is the Phase 4b-follow-up item's own regression
+    # guard: unknown-city 400s before the gazetteer/DB-path change, and the
+    # fastest route's gate chain must cross more than one operator to prove
+    # cross-operator connectivity is actually exercised, not just present.
+    with TestClient(api.app) as client:
+        resp = client.get(
+            "/route", params={"origin": "lille", "destination": "marseille", "vehicle_class": 1}
+        )
+    assert resp.status_code == 200
+    data = resp.json()
+    fastest = next(o for o in data["options"] if "fastest" in o["labels"])
+    assert fastest["toll_eur"] > 0
+    assert len(fastest["gates"]) >= 2
+
+    import sqlite3
+
+    from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH
+
+    conn = sqlite3.connect(DEFAULT_NATIONAL_DB_PATH)
+    try:
+        operators = {
+            conn.execute("SELECT operators FROM gates WHERE gare_id = ?", (gid,)).fetchone()[0]
+            for gid in fastest["gates"]
+        }
+    finally:
+        conn.close()
+    assert len(operators) > 1, f"expected a cross-operator gate chain, got {operators}"
+
+
+@requires_osrm
 def test_route_endpoint_unknown_city_returns_400():
     with TestClient(api.app) as client:
         resp = client.get("/route", params={"origin": "nowhere", "destination": "lyon"})
