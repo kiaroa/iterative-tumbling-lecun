@@ -2,8 +2,23 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tollroute import api
+from tollroute import osrm_client as osrm_client_mod
+from tollroute.cli import GAZETTEER
 from tollroute.cli import run as cli_run
 from tollroute.etl import snap_report
+
+DIJON = GAZETTEER["dijon"]
+LYON = GAZETTEER["lyon"]
+LILLE = GAZETTEER["lille"]
+MARSEILLE = GAZETTEER["marseille"]
+
+
+def _params(origin, destination, **extra):
+    return {
+        "origin_lat": origin[0], "origin_lon": origin[1],
+        "destination_lat": destination[0], "destination_lon": destination[1],
+        **extra,
+    }
 
 
 def _gate_chain(route) -> list[int]:
@@ -40,11 +55,13 @@ def test_route_endpoint_fastest_option_matches_cli():
     cli_route = cli_run("dijon", "lyon", vehicle_class=1)
 
     with TestClient(api.app) as client:
-        resp = client.get("/route", params={"origin": "dijon", "destination": "lyon", "vehicle_class": 1})
+        resp = client.get("/route", params=_params(DIJON, LYON, vehicle_class=1))
 
     assert resp.status_code == 200
     data = resp.json()
     assert data["vehicle_class"] == 1
+    assert data["baseline"] is not None
+    assert data["baseline"]["duration_s"] > 0
     options = data["options"]
     assert 1 <= len(options) <= 5
 
@@ -54,6 +71,7 @@ def test_route_endpoint_fastest_option_matches_cli():
     assert fastest[0]["duration_s"] == pytest.approx(cli_route.duration_s)
     assert fastest[0]["distance_m"] == pytest.approx(cli_route.distance_m)
     assert fastest[0]["gates"] == _gate_chain(cli_route)
+    assert "route_id" in fastest[0]
 
     assert any("cheapest" in o["labels"] for o in options)
     assert any("best_value" in o["labels"] for o in options)
@@ -62,10 +80,7 @@ def test_route_endpoint_fastest_option_matches_cli():
 @requires_osrm
 def test_route_endpoint_accepts_vot_override():
     with TestClient(api.app) as client:
-        resp = client.get(
-            "/route",
-            params={"origin": "dijon", "destination": "lyon", "vehicle_class": 1, "vot_eur_per_hour": 1.0},
-        )
+        resp = client.get("/route", params=_params(DIJON, LYON, vehicle_class=1, vot_eur_per_hour=1.0))
     assert resp.status_code == 200
     assert resp.json()["vot_eur_per_hour"] == pytest.approx(1.0)
 
@@ -75,13 +90,11 @@ def test_route_endpoint_serves_national_multi_operator_pair():
     # Phase 4b's named exit criterion (Lille -> Marseille) is only servable
     # once the API is wired to the national (all-operator) DB with Phase 2c's
     # transfer edges - this is the Phase 4b-follow-up item's own regression
-    # guard: unknown-city 400s before the gazetteer/DB-path change, and the
-    # fastest route's gate chain must cross more than one operator to prove
-    # cross-operator connectivity is actually exercised, not just present.
+    # guard: the fastest route's gate chain must cross more than one operator
+    # to prove cross-operator connectivity is actually exercised, not just
+    # present.
     with TestClient(api.app) as client:
-        resp = client.get(
-            "/route", params={"origin": "lille", "destination": "marseille", "vehicle_class": 1}
-        )
+        resp = client.get("/route", params=_params(LILLE, MARSEILLE, vehicle_class=1))
     assert resp.status_code == 200
     data = resp.json()
     fastest = next(o for o in data["options"] if "fastest" in o["labels"])
@@ -104,14 +117,48 @@ def test_route_endpoint_serves_national_multi_operator_pair():
 
 
 @requires_osrm
-def test_route_endpoint_unknown_city_returns_400():
+def test_route_endpoint_invalid_vehicle_class_returns_400():
     with TestClient(api.app) as client:
-        resp = client.get("/route", params={"origin": "nowhere", "destination": "lyon"})
+        resp = client.get("/route", params=_params(DIJON, LYON, vehicle_class=9))
     assert resp.status_code == 400
 
 
 @requires_osrm
-def test_route_endpoint_invalid_vehicle_class_returns_400():
+def test_route_endpoint_returns_osrm_unavailable_when_osrm_mocked_down(monkeypatch):
+    # Point the app's OSRM client at a port nothing listens on so every OSRM
+    # call fails; the retry-once policy (osrm_client.RETRY_DELAY_S) still
+    # runs, then the endpoint must degrade to {"osrm_unavailable": true}
+    # rather than a 500 (spec: Phase 4c OSRM-failure exit criterion).
+    import httpx
+
+    monkeypatch.setattr(osrm_client_mod, "RETRY_DELAY_S", 0.01)
     with TestClient(api.app) as client:
-        resp = client.get("/route", params={"origin": "dijon", "destination": "lyon", "vehicle_class": 9})
-    assert resp.status_code == 400
+        real_client = api.app.state.osrm_client
+        api.app.state.osrm_client = httpx.Client(base_url="http://127.0.0.1:1", timeout=2.0)
+        try:
+            resp = client.get("/route", params=_params(DIJON, LYON))
+        finally:
+            api.app.state.osrm_client = real_client
+    assert resp.status_code == 200
+    assert resp.json() == {"osrm_unavailable": True}
+
+
+@requires_osrm
+def test_geometry_endpoint_returns_geojson_for_selected_option():
+    with TestClient(api.app) as client:
+        resp = client.get("/route", params=_params(DIJON, LYON, vehicle_class=1))
+        assert resp.status_code == 200
+        route_id = resp.json()["options"][0]["route_id"]
+
+        geo_resp = client.get(f"/geometry/{route_id}")
+    assert geo_resp.status_code == 200
+    geometry = geo_resp.json()
+    assert geometry["type"] == "LineString"
+    assert len(geometry["coordinates"]) >= 2
+
+
+@requires_osrm
+def test_geometry_endpoint_unknown_route_id_returns_404():
+    with TestClient(api.app) as client:
+        resp = client.get("/geometry/does-not-exist")
+    assert resp.status_code == 404
