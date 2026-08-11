@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import logging
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -569,8 +570,22 @@ def add_access_edges(
     # toll-edge accounting (confirmed empirically: Dijon->Lyon's access edge
     # alone reproduced the tolled route's distance/duration almost exactly,
     # at zero toll).
-    entry_legs = osrm_client_mod.one_to_many_table(osrm_client, origin, entry_coords, exclude_toll=True)
-    exit_legs = osrm_client_mod.many_to_one_table(osrm_client, exit_coords, destination, exclude_toll=True)
+    # Phase 4c-follow-up-4: the two /table batches are independent of each
+    # other (one origin->gates, one gates->destination), so fire them
+    # concurrently rather than paying their wall-clock sequentially -
+    # `httpx.Client` is thread-safe for this (see `osrm_client._get_json_concurrent`,
+    # which each call below also uses internally to tile its own <=100-wide
+    # blocks). Halves this function's OSRM wait time with no change to which
+    # access edges are added or their values.
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        entry_future = pool.submit(
+            osrm_client_mod.one_to_many_table, osrm_client, origin, entry_coords, exclude_toll=True
+        )
+        exit_future = pool.submit(
+            osrm_client_mod.many_to_one_table, osrm_client, exit_coords, destination, exclude_toll=True
+        )
+        entry_legs = entry_future.result()
+        exit_legs = exit_future.result()
 
     no_toll_free_access_count = 0
     for gid, leg in zip(entry_gids, entry_legs):
