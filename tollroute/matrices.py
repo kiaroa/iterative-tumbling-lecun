@@ -193,16 +193,18 @@ def spot_check(
     return rows
 
 
-def _toll_free_isolation_summary(distance_matrix: np.ndarray, isolation_threshold: float = 0.9) -> dict:
-    """How much of the toll-free NaN count is explained by a small set of
-    near-isolated nodes, vs. spread thinly across many pairs.
+def isolated_matrix_indices(distance_matrix: np.ndarray, isolation_threshold: float = 0.9) -> np.ndarray:
+    """Row/column indices whose NaN fraction is >= `isolation_threshold`.
 
     A node whose row (or column) is >= `isolation_threshold` NaN has, in
-    effect, no toll-free road connectivity to (or from) the rest of the
-    network in this OSRM extract - almost always because the physical gate's
-    only mapped access is itself tagged `toll=yes` right up to the barrier,
-    so excluding toll ways strands that one node rather than reflecting a
-    real nationwide gap in the free road network.
+    effect, no connectivity to (or from) the rest of the network in this
+    matrix. For the toll-free matrix this almost always means the physical
+    gate's only mapped access is itself tagged `toll=yes` right up to the
+    barrier, so excluding toll ways strands that one node rather than
+    reflecting a real nationwide gap in the free road network. Public so
+    Phase 3c's toll-tagging audit (`tollroute/validation/toll_tagging_audit.py`)
+    can test that conjecture against the same node list this module already
+    identified, rather than re-deriving it.
     """
     n = distance_matrix.shape[0]
     nan = np.isnan(distance_matrix)
@@ -210,7 +212,17 @@ def _toll_free_isolation_summary(distance_matrix: np.ndarray, isolation_threshol
     row_nan = nan.sum(axis=1)
     col_nan = nan.sum(axis=0)
     threshold = (n - 1) * isolation_threshold
-    isolated = np.where((row_nan >= threshold) | (col_nan >= threshold))[0]
+    return np.where((row_nan >= threshold) | (col_nan >= threshold))[0]
+
+
+def _toll_free_isolation_summary(distance_matrix: np.ndarray, isolation_threshold: float = 0.9) -> dict:
+    """How much of the toll-free NaN count is explained by a small set of
+    near-isolated nodes, vs. spread thinly across many pairs.
+    """
+    n = distance_matrix.shape[0]
+    nan = np.isnan(distance_matrix)
+    np.fill_diagonal(nan, False)
+    isolated = isolated_matrix_indices(distance_matrix, isolation_threshold)
     mask = np.zeros((n, n), dtype=bool)
     mask[isolated, :] = True
     mask[:, isolated] = True
