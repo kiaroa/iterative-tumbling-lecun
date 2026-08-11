@@ -5,7 +5,7 @@ import pytest
 
 from tollroute import graph as graph_mod
 from tollroute import routing
-from tollroute.etl import load, snap_report
+from tollroute.etl import coverage_audit, load, snap_report
 
 
 def _osrm_reachable() -> bool:
@@ -37,7 +37,7 @@ def built_graph():
         try:
             with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
                 snap_report.snap_all_gates(conn, client)
-                g = graph_mod.build_graph(conn, client)
+                g = graph_mod.build_graph(conn)
         finally:
             conn.close()
     return g
@@ -61,6 +61,92 @@ def test_graph_builds_with_expected_node_and_edge_shape(built_graph):
 
     # Every toll edge carries an operator label (APRR-only in Phase 1).
     assert all(e.operator == "APRR" for e in toll_edges)
+
+
+@pytest.fixture(scope="module")
+def national_built_graph():
+    """Phase 2c transfer-edge wiring is vacuous on an APRR-only graph (no
+    other operator's gates are loaded to connect to), so these tests build
+    off the national (all-operator) load instead - unremediated
+    (`coverage_audit.build_full_db`, not `build_national.run`) is enough
+    here since the transfer-edge mechanism only needs gates/operators/fares
+    loaded and snapped, not Phase 2b's disposition/rematch remediation.
+    """
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        db_path = Path(tmp) / "tollroute_full.sqlite"
+        conn, _ = coverage_audit.build_full_db(db_path=db_path)
+        try:
+            with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
+                snap_report.snap_all_gates(conn, client)
+            g = graph_mod.build_graph(conn)
+        finally:
+            conn.close()
+    return g
+
+
+@requires_osrm
+def test_ablis_boundary_edge_wired_both_directions(national_built_graph):
+    g = national_built_graph
+
+    # ABLIS: gare_id 4 (ASFC) and 5 (Cofiroute), 0 m apart, disjoint
+    # operators - the spec's one manually-verified boundary anchor
+    # (reports/phase2c_clustering.md). Free, zero-time, and must connect
+    # both OUT and OUT_TOLL (a toll arrival can cross straight over) to the
+    # other gate's OUT (ready to start a new toll edge with no extra dwell).
+    for a, b in ((4, 5), (5, 4)):
+        for src_role in (graph_mod.NodeRole.OUT, graph_mod.NodeRole.OUT_TOLL):
+            matches = [
+                e
+                for e in g.edges
+                if e.edge_type == graph_mod.EdgeType.BOUNDARY
+                and e.from_node == graph_mod.Node(a, src_role)
+                and e.to_node == graph_mod.Node(b, graph_mod.NodeRole.OUT)
+            ]
+            assert len(matches) == 1, f"missing boundary edge {a}({src_role}) -> {b}(OUT)"
+            assert matches[0].duration_s == 0.0
+            assert matches[0].distance_m == 0.0
+
+
+@requires_osrm
+def test_exit_reentry_edge_carries_dwell_and_lands_on_in(national_built_graph):
+    g = national_built_graph
+
+    # ANCENIS (40) <-> ANGERS (43): 0 m apart, both Cofiroute - same
+    # concession, so a 3 min / 0.5 km exit/re-entry dwell, landing on IN
+    # (not OUT) so a further per-gate dwell is required before any new toll
+    # edge - excluded as a toll-edge connector, per the Core architectural
+    # decision.
+    for a, b in ((40, 43), (43, 40)):
+        for src_role in (graph_mod.NodeRole.OUT, graph_mod.NodeRole.OUT_TOLL):
+            matches = [
+                e
+                for e in g.edges
+                if e.edge_type == graph_mod.EdgeType.EXIT_REENTRY
+                and e.from_node == graph_mod.Node(a, src_role)
+                and e.to_node == graph_mod.Node(b, graph_mod.NodeRole.IN)
+            ]
+            assert len(matches) == 1, f"missing exit_reentry edge {a}({src_role}) -> {b}(IN)"
+            assert matches[0].duration_s == pytest.approx(180.0)
+            assert matches[0].distance_m == pytest.approx(500.0)
+
+
+@requires_osrm
+def test_transfer_edges_never_invert_the_out_in_landing_rule(national_built_graph):
+    g = national_built_graph
+
+    # Structural invariant mirroring test_dwell_edge_cannot_chain_two_toll_
+    # edges above: a BOUNDARY edge is the only permitted connector between
+    # two different-operator toll edges, which only holds if it always
+    # lands on OUT (never IN); EXIT_REENTRY must never take the OUT-landing
+    # shortcut either, or the same-operator no-chaining rule would leak.
+    boundary_edges = [e for e in g.edges if e.edge_type == graph_mod.EdgeType.BOUNDARY]
+    exit_reentry_edges = [e for e in g.edges if e.edge_type == graph_mod.EdgeType.EXIT_REENTRY]
+    assert boundary_edges and exit_reentry_edges
+    assert all(e.to_node.role == graph_mod.NodeRole.OUT for e in boundary_edges)
+    assert all(e.to_node.role == graph_mod.NodeRole.IN for e in exit_reentry_edges)
 
 
 @requires_osrm
@@ -124,28 +210,15 @@ def test_dwell_edge_cannot_chain_two_toll_edges(built_graph):
     assert len(next_hop_tollfree_edges) > 0
 
 
-def _mock_osrm_table_client() -> httpx.Client:
-    """A single-gate table always resolves to the trivial 1x1 zero matrix -
-    good enough to exercise build_graph's self-loop path without a live
-    OSRM instance (Phase 2c follow-up: A14 self-loop fare rows, e.g. gate
-    547 "PEAGE DE MONTESSON", never reach a live regional extract since
-    graph.py's own OSRM lookup is bypassed for self-loops - see below).
-    """
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path.startswith("/table/v1/car/")
-        return httpx.Response(200, json={"code": "Ok", "durations": [[0.0]], "distances": [[0.0]]})
-
-    return httpx.Client(base_url="http://osrm.test", transport=httpx.MockTransport(handler))
-
-
 def test_a14_selfloop_becomes_priced_freeflow_edge_not_dropped():
     """Phase 2c follow-up: a self-loop fare row (from_gare_id == to_gare_id,
     A14's single-gantry flat-fee pattern) must become a priced TOLL edge
     reachable via the normal IN -> dwell -> OUT -> toll -> IN_TOLL -> dwell
     -> OUT_TOLL chain, not a zero-length no-op or a silently dropped row.
-    Synthetic single-gate DB + mocked OSRM client, so this runs without a
-    live OSRM instance (unlike the rest of this module).
+    Synthetic single-gate DB, so this runs without a live OSRM instance
+    (unlike the rest of this module) - build_graph itself no longer calls
+    OSRM at all (Phase 4b-follow-up: gate-to-gate legs come from the
+    precomputed matrix), so no mocking is needed here either.
     """
     conn = sqlite3.connect(":memory:")
     conn.executescript(load.SCHEMA_PATH.read_text())
@@ -160,8 +233,7 @@ def test_a14_selfloop_becomes_priced_freeflow_edge_not_dropped():
     )
     conn.commit()
 
-    with _mock_osrm_table_client() as client:
-        g = graph_mod.build_graph(conn, client)
+    g = graph_mod.build_graph(conn)
 
     selfloop_edges = [
         e

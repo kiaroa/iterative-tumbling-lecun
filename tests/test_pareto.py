@@ -38,7 +38,7 @@ def base_graph_and_config():
         try:
             with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
                 snap_report.snap_all_gates(conn, client)
-                g = graph_mod.build_graph(conn, client)
+                g = graph_mod.build_graph(conn)
             class_config = cost.load_class_config(conn)
         finally:
             conn.close()
