@@ -57,6 +57,7 @@ def _graph_copy(g: graph_mod.Graph) -> graph_mod.Graph:
         gate_coords=dict(g.gate_coords),
         access_anchors_entry=dict(g.access_anchors_entry),
         access_anchors_exit=dict(g.access_anchors_exit),
+        freeflow_selfloop_gate_ids=set(g.freeflow_selfloop_gate_ids),
     )
 
 

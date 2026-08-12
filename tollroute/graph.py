@@ -130,6 +130,16 @@ class Graph:
     # `add_access_edges` uses the raw `gate_coords` entry unchanged for every other gate.
     access_anchors_entry: dict[int, tuple[float, float, float, float]] = field(default_factory=dict)
     access_anchors_exit: dict[int, tuple[float, float, float, float]] = field(default_factory=dict)
+    # Phase 5b-follow-up-2-continued: gare_ids priced as a free-flow single-gantry
+    # self-loop toll edge (OUT -> IN_TOLL of the same gate; A14's 5 dataset rows,
+    # plus any freeflow.seed_*-inserted structure like Millau). Unlike an ordinary
+    # two-endpoint gate, a self-loop gate's OUT node has no genuine physical
+    # toll-free lane around the gantry - it is the exact same point as IN_TOLL, just
+    # not yet paid. `add_access_edges` uses this set to withhold the OUT-node exit
+    # access edge (destination-bound) for these gates, since granting one lets a
+    # route "arrive" at the gate and leave again without ever crossing the TOLL
+    # edge, defeating the fee - see that function's docstring for the investigation.
+    freeflow_selfloop_gate_ids: set[int] = field(default_factory=set)
     # Phase 4c-follow-up-3: cache of routing.build_edge_arrays's numpy arrays
     # for exactly `edges[:static_edge_count]` - the edges present right after
     # `build_graph` finishes, before any per-request access edge is added.
@@ -379,6 +389,7 @@ def build_graph(
                 operator=operator,
                 toll_eur={1: c1, 2: c2, 3: c3, 4: c4, 5: c5},
             )
+            graph.freeflow_selfloop_gate_ids.add(from_id)
             freeflow_selfloop_count += 1
             toll_edge_count += 1
             continue
@@ -601,6 +612,16 @@ def add_access_edges(
     back onto whatever duration/distance OSRM returns. Entry and exit use separate anchors
     because reachability on a divided/oneway motorway is directional - reusing one shared
     anchor for both was verified to silently break entry access edges for most gates.
+
+    **Phase 5b-follow-up-2-continued:** a gate in `graph.freeflow_selfloop_gate_ids`
+    (A14-style single-gantry self-loop, incl. Millau) only gets its exit access edge on
+    OUT_TOLL, never OUT. Direct-verified against the Millau case: granting OUT an exit
+    edge too let Clermont-Ferrand->Montpellier's route go origin -> ACCESS -> gate's IN
+    -> DWELL -> gate's OUT -> ACCESS -> destination, "visiting" the gate and leaving
+    again without ever taking the TOLL edge to IN_TOLL, at toll_eur=0.00 - a free ride
+    an ordinary two-endpoint gate's OUT node doesn't allow, because there the toll-free
+    OSRM route into OUT is a genuine physical bypass lane, not the untolled near side of
+    the exact same point the toll is charged at.
     """
     origin_node = Node(-1, NodeRole.IN)
     destination_node = Node(-2, NodeRole.OUT)
@@ -678,7 +699,12 @@ def add_access_edges(
             no_toll_free_access_count += 1
             continue
         duration, distance = _with_apron(graph.access_anchors_exit, gid, *leg)
-        for role in (NodeRole.OUT, NodeRole.OUT_TOLL):
+        roles = (
+            (NodeRole.OUT_TOLL,)
+            if gid in graph.freeflow_selfloop_gate_ids
+            else (NodeRole.OUT, NodeRole.OUT_TOLL)
+        )
+        for role in roles:
             node = Node(gid, role)
             if node not in graph.node_index:
                 continue

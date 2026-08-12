@@ -1,7 +1,10 @@
+import dataclasses
+
 import pytest
 from fastapi.testclient import TestClient
 
 from tollroute import api
+from tollroute import graph as graph_mod
 from tollroute import osrm_client as osrm_client_mod
 from tollroute.cli import GAZETTEER
 from tollroute.cli import run as cli_run
@@ -44,6 +47,41 @@ def _osrm_reachable() -> bool:
 requires_osrm = pytest.mark.skipif(
     not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
 )
+
+
+def test_graph_copy_preserves_every_graph_dataclass_field():
+    """Regression guard: `_graph_copy` reconstructs a `Graph` field-by-field (it can't
+    just `copy.copy` - `add_access_edges` mutates the copy in place, and a shallow
+    `copy.copy` would still share the *same* `edges`/`nodes` lists as the startup
+    graph). Every time `graph_mod.Graph` gains a new field, `_graph_copy` must be
+    updated to carry it over, or the copy silently reverts to that field's default -
+    exactly what happened to `freeflow_selfloop_gate_ids` here (Phase
+    5b-follow-up-2-continued: it defaulted to an empty set on every per-request copy,
+    so the Millau toll-skip fix in `add_access_edges` passed its own direct unit test
+    yet never actually fired through the real API path, only surfacing when the golden
+    fixtures were re-recorded and still showed `toll_eur: 0.0`). Iterates
+    `dataclasses.fields` generically so this doesn't need hand-updating for the *next*
+    new field either.
+    """
+    g = graph_mod.Graph(
+        gate_coords={1: (1.0, 2.0)},
+        access_anchors_entry={1: (1.0, 2.0, 3.0, 4.0)},
+        access_anchors_exit={1: (1.0, 2.0, 3.0, 4.0)},
+        freeflow_selfloop_gate_ids={1},
+    )
+    g.add_node(graph_mod.Node(1, graph_mod.NodeRole.IN))
+    g.add_edge(
+        graph_mod.Node(1, graph_mod.NodeRole.IN),
+        graph_mod.Node(1, graph_mod.NodeRole.IN),
+        graph_mod.EdgeType.DWELL,
+        1.0,
+        1.0,
+    )
+
+    copied = api._graph_copy(g)
+
+    for f in dataclasses.fields(graph_mod.Graph):
+        assert getattr(copied, f.name) == getattr(g, f.name), f"_graph_copy dropped field {f.name!r}"
 
 
 @requires_osrm

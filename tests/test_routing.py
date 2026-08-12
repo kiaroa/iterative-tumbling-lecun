@@ -58,6 +58,7 @@ def _graph_copy(g: graph_mod.Graph) -> graph_mod.Graph:
         gate_coords=dict(g.gate_coords),
         access_anchors_entry=dict(g.access_anchors_entry),
         access_anchors_exit=dict(g.access_anchors_exit),
+        freeflow_selfloop_gate_ids=set(g.freeflow_selfloop_gate_ids),
         static_edge_count=g.static_edge_count,
         static_edge_arrays=g.static_edge_arrays,
     )
@@ -198,3 +199,50 @@ def test_add_access_edges_queries_anchor_coord_and_adds_apron(monkeypatch):
     )
     assert exit_edge.duration_s == pytest.approx(2000.0 + exit_apron_duration_s)
     assert exit_edge.distance_m == pytest.approx(8000.0 + exit_apron_distance_m)
+
+
+def test_add_access_edges_withholds_out_exit_edge_for_freeflow_selfloop_gates(monkeypatch):
+    """Phase 5b-follow-up-2-continued: a gate in `graph.freeflow_selfloop_gate_ids`
+    (A14-style single-gantry self-loop, incl. Millau) must only get its exit access
+    edge on OUT_TOLL, never OUT - direct-verified against the live Millau case that
+    granting OUT one lets a route reach the gate and leave again via a toll-free
+    access edge without ever taking the TOLL edge to IN_TOLL, i.e. a free ride an
+    ordinary two-endpoint gate's OUT node doesn't allow (there, the toll-free route
+    into OUT is a genuine physical bypass lane, not the unpaid near side of the exact
+    point the toll is charged at). Gate 2 (ordinary, not in the set) is included to
+    pin this doesn't over-suppress the general case.
+    """
+    g = graph_mod.Graph(
+        gate_coords={1: (48.0, 2.0), 2: (49.0, 3.0)},
+        freeflow_selfloop_gate_ids={1},
+    )
+    for gid in (1, 2):
+        g.add_node(graph_mod.Node(gid, graph_mod.NodeRole.IN))
+        g.add_node(graph_mod.Node(gid, graph_mod.NodeRole.OUT))
+        g.add_node(graph_mod.Node(gid, graph_mod.NodeRole.OUT_TOLL))
+
+    monkeypatch.setattr(
+        osrm_client_mod, "one_to_many_table", lambda client, origin, destinations, exclude_toll: [
+            (1000.0, 5000.0) for _ in destinations
+        ],
+    )
+    monkeypatch.setattr(
+        osrm_client_mod, "many_to_one_table", lambda client, origins, destination, exclude_toll: [
+            (2000.0, 8000.0) for _ in origins
+        ],
+    )
+
+    _origin_node, destination_node = graph_mod.add_access_edges(
+        g, None, origin=(0.0, 0.0), destination=(9.0, 9.0)
+    )
+
+    def _has_exit_edge(gid: int, role: graph_mod.NodeRole) -> bool:
+        return any(
+            e.to_node == destination_node and e.from_node == graph_mod.Node(gid, role)
+            for e in g.edges
+        )
+
+    assert _has_exit_edge(1, graph_mod.NodeRole.OUT) is False
+    assert _has_exit_edge(1, graph_mod.NodeRole.OUT_TOLL) is True
+    assert _has_exit_edge(2, graph_mod.NodeRole.OUT) is True
+    assert _has_exit_edge(2, graph_mod.NodeRole.OUT_TOLL) is True
