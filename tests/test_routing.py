@@ -56,7 +56,8 @@ def _graph_copy(g: graph_mod.Graph) -> graph_mod.Graph:
         node_index=dict(g.node_index),
         edges=list(g.edges),
         gate_coords=dict(g.gate_coords),
-        access_anchors=dict(g.access_anchors),
+        access_anchors_entry=dict(g.access_anchors_entry),
+        access_anchors_exit=dict(g.access_anchors_exit),
         static_edge_count=g.static_edge_count,
         static_edge_arrays=g.static_edge_arrays,
     )
@@ -119,21 +120,37 @@ def test_cli_route_for_named_pairs(base_graph, origin_city, dest_city):
 
 
 def test_add_access_edges_queries_anchor_coord_and_adds_apron(monkeypatch):
-    """Phase 5b-follow-up-1: a gate with a `graph.access_anchors` entry must be
-    queried (via the batched OSRM /table calls) at its anchor coordinate, not
-    its own - the gate's own coordinate is the physical barrier on tolled
-    tarmac, which can be an unreachable pocket in the `exclude=toll` graph
-    (`tollroute.etl.access_anchors`) - with the anchor's apron duration/
-    distance added back onto whatever leg OSRM returns for anchor->gate.
+    """Phase 5b-follow-up-1: a gate with a `graph.access_anchors_entry`/
+    `access_anchors_exit` entry must be queried (via the batched OSRM /table
+    calls) at its anchor coordinate, not its own - the gate's own coordinate
+    is the physical barrier on tolled tarmac, which can be an unreachable
+    pocket in the `exclude=toll` graph (`tollroute.etl.access_anchors`) -
+    with the anchor's apron duration/distance added back onto whatever leg
+    OSRM returns for anchor<->gate.
+
+    Phase 5b-follow-up-1-continued: entry and exit anchors are deliberately
+    given *different* coordinates here (unlike a single shared anchor) to
+    pin that `add_access_edges` looks each one up independently - reachability
+    on a divided/oneway motorway is directional, and reusing one direction's
+    anchor for the other was found to silently break most of the anchors
+    Phase 5b-follow-up-1 originally shipped.
+
     Self-contained (no live OSRM): the batched-table calls are monkeypatched
     so this only exercises `add_access_edges`'s own coordinate-selection and
     apron-arithmetic logic.
     """
-    anchor_lat, anchor_lon = 48.001, 2.001
-    apron_distance_m, apron_duration_s = 300.0, 25.0
+    entry_anchor_lat, entry_anchor_lon = 48.001, 2.001
+    entry_apron_distance_m, entry_apron_duration_s = 300.0, 25.0
+    exit_anchor_lat, exit_anchor_lon = 48.002, 2.002
+    exit_apron_distance_m, exit_apron_duration_s = 450.0, 40.0
     g = graph_mod.Graph(
         gate_coords={1: (48.000, 2.000), 2: (49.0, 3.0)},
-        access_anchors={1: (anchor_lat, anchor_lon, apron_distance_m, apron_duration_s)},
+        access_anchors_entry={
+            1: (entry_anchor_lat, entry_anchor_lon, entry_apron_distance_m, entry_apron_duration_s)
+        },
+        access_anchors_exit={
+            1: (exit_anchor_lat, exit_anchor_lon, exit_apron_distance_m, exit_apron_duration_s)
+        },
     )
     for gid in (1, 2):
         g.add_node(graph_mod.Node(gid, graph_mod.NodeRole.IN))
@@ -158,16 +175,17 @@ def test_add_access_edges_queries_anchor_coord_and_adds_apron(monkeypatch):
         g, None, origin=(0.0, 0.0), destination=(9.0, 9.0)
     )
 
-    # The anchored gate (1) is queried at its anchor coordinate, not its raw
-    # `gate_coords` entry; the unanchored gate (2) is queried unchanged.
-    assert captured_entry_coords == [(anchor_lat, anchor_lon), (49.0, 3.0)]
-    assert captured_exit_coords == [(anchor_lat, anchor_lon), (49.0, 3.0)]
+    # The anchored gate (1) is queried at its own direction's anchor coordinate
+    # (entry != exit here), not its raw `gate_coords` entry; the unanchored
+    # gate (2) is queried unchanged.
+    assert captured_entry_coords == [(entry_anchor_lat, entry_anchor_lon), (49.0, 3.0)]
+    assert captured_exit_coords == [(exit_anchor_lat, exit_anchor_lon), (49.0, 3.0)]
 
     entry_edge = next(
         e for e in g.edges if e.from_node == origin_node and e.to_node == graph_mod.Node(1, graph_mod.NodeRole.IN)
     )
-    assert entry_edge.duration_s == pytest.approx(1000.0 + apron_duration_s)
-    assert entry_edge.distance_m == pytest.approx(5000.0 + apron_distance_m)
+    assert entry_edge.duration_s == pytest.approx(1000.0 + entry_apron_duration_s)
+    assert entry_edge.distance_m == pytest.approx(5000.0 + entry_apron_distance_m)
 
     unanchored_entry_edge = next(
         e for e in g.edges if e.from_node == origin_node and e.to_node == graph_mod.Node(2, graph_mod.NodeRole.IN)
@@ -178,5 +196,5 @@ def test_add_access_edges_queries_anchor_coord_and_adds_apron(monkeypatch):
     exit_edge = next(
         e for e in g.edges if e.to_node == destination_node and e.from_node == graph_mod.Node(1, graph_mod.NodeRole.OUT)
     )
-    assert exit_edge.duration_s == pytest.approx(2000.0 + apron_duration_s)
-    assert exit_edge.distance_m == pytest.approx(8000.0 + apron_distance_m)
+    assert exit_edge.duration_s == pytest.approx(2000.0 + exit_apron_duration_s)
+    assert exit_edge.distance_m == pytest.approx(8000.0 + exit_apron_distance_m)
