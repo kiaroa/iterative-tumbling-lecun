@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import math
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,6 +32,16 @@ DEFAULT_REPORT_PATH = REPO_ROOT / "reports" / "phase1b_snapping.md"
 DEFAULT_OSRM_BASE_URL = "http://localhost:5000"
 
 SNAP_FLAG_THRESHOLD_M = 200.0
+
+# Relative tolerance for the A75 geo-only pair's "near-identical" check (see
+# verify_geo_only_pair). Confirmed via a direct osrm-routed --threads sweep
+# (reports/phase5c_followup_a75_osrm_nondeterminism.md) that this specific corridor
+# has two near-tied routes (differing by <=1.8% distance / <=6.1% duration) that
+# OSRM's MLD algorithm picks between non-deterministically once server concurrency
+# exceeds ~2 threads (production runs 24) -- not a systematic toll-vs-toll-free bias.
+# 10% sits comfortably above that noise ceiling and comfortably below the 40-75%
+# duration gap the other 4 named pairs show for a genuine toll bypass (phase1b_snapping.md).
+GEO_ONLY_MATERIAL_DIVERGENCE_REL_TOL = 0.10
 
 # The 5 named test pairs from iterative-tumbling-lecun.md Phase 1b, resolved to
 # concrete APRR gare_ids. Gates 1, 2 and 4-5 are genuine APRR fare-matrix pairs
@@ -220,8 +231,13 @@ def verify_fare_pair(conn: sqlite3.Connection, client: httpx.Client, pair: FareG
 def verify_geo_only_pair(client: httpx.Client, pair: GeoOnlyPair) -> dict:
     tolled = osrm_route(client, pair.origin, pair.destination, exclude_toll=False)
     toll_free = osrm_route(client, pair.origin, pair.destination, exclude_toll=True)
-    distinct = (
-        tolled["distance"] != toll_free["distance"] or tolled["duration"] != toll_free["duration"]
+    distinct = not (
+        math.isclose(
+            tolled["distance"], toll_free["distance"], rel_tol=GEO_ONLY_MATERIAL_DIVERGENCE_REL_TOL
+        )
+        and math.isclose(
+            tolled["duration"], toll_free["duration"], rel_tol=GEO_ONLY_MATERIAL_DIVERGENCE_REL_TOL
+        )
     )
 
     return {
