@@ -74,3 +74,22 @@ Start the API itself (loads the DB and matrices `rebuild.sh` produced) with:
 ```sh
 uvicorn tollroute.api:app
 ```
+
+## Free-text geocoding (Phase 6b)
+
+`/route` accepts either coordinates or a free-text address per endpoint -
+`origin_lat`/`origin_lon` (and the `destination_*` equivalents) or
+`origin_address`/`destination_address`, not both. A free-text address is
+resolved to lat/lon via the French government's Base Adresse Nationale (BAN)
+search API (`api-adresse.data.gouv.fr`, no key required) before anything
+else runs, so the routing core itself is unchanged - `tollroute/geocode.py`
+owns the resolution step. A `422` means the address could not be resolved
+(unreachable geocoder after one retry, or no match); a `400` means the
+request mixed both input forms, or gave neither, for one endpoint.
+
+```sh
+curl "http://localhost:8000/route?origin_address=Dijon&destination_address=Lyon&vehicle_class=1"
+```
+
+returns the same result as the equivalent `origin_lat`/`origin_lon`/
+`destination_lat`/`destination_lon` call.
