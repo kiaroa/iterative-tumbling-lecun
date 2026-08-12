@@ -1,10 +1,13 @@
 import dataclasses
+import logging
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 from tollroute import api
 from tollroute import graph as graph_mod
+from tollroute import logging as logging_mod
 from tollroute import osrm_client as osrm_client_mod
 from tollroute.cli import GAZETTEER
 from tollroute.cli import run as cli_run
@@ -200,3 +203,50 @@ def test_geometry_endpoint_unknown_route_id_returns_404():
     with TestClient(api.app) as client:
         resp = client.get("/geometry/does-not-exist")
     assert resp.status_code == 404
+
+
+@requires_osrm
+def test_route_endpoint_logs_full_gate_chain(caplog):
+    # Phase 6a exit criterion: "a single request log contains the full gate
+    # chain" - checked here for every option, not just the labelled winner,
+    # since "why this route" debugging usually means "why not that one".
+    with caplog.at_level(logging.INFO, logger=logging_mod.ROUTE_LOGGER_NAME):
+        with TestClient(api.app) as client:
+            resp = client.get("/route", params=_params(DIJON, LYON, vehicle_class=1))
+    assert resp.status_code == 200
+    data = resp.json()
+
+    route_records = [r for r in caplog.records if r.name == logging_mod.ROUTE_LOGGER_NAME]
+    assert len(route_records) == 1
+    fields = route_records[0].fields
+    assert fields["vehicle_class"] == 1
+
+    logged_chains = {tuple(o["gates"]) for o in fields["options"]}
+    response_chains = {tuple(o["gates"]) for o in data["options"]}
+    assert logged_chains == response_chains
+    assert len(fields["options"]) == len(data["options"])
+
+
+@requires_osrm
+def test_health_endpoint_returns_200_when_osrm_up():
+    with TestClient(api.app) as client:
+        resp = client.get("/health")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body == {"osrm_reachable": True, "matrix_loaded": True, "gate_count": body["gate_count"]}
+    assert body["gate_count"] > 0
+
+
+@requires_osrm
+def test_health_endpoint_returns_503_when_osrm_mocked_down():
+    with TestClient(api.app) as client:
+        real_client = api.app.state.osrm_client
+        api.app.state.osrm_client = httpx.Client(base_url="http://127.0.0.1:1", timeout=2.0)
+        try:
+            resp = client.get("/health")
+        finally:
+            api.app.state.osrm_client = real_client
+    assert resp.status_code == 503
+    body = resp.json()
+    assert body["osrm_reachable"] is False
+    assert body["matrix_loaded"] is True
