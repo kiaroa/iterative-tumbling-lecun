@@ -118,3 +118,30 @@ CREATE TABLE IF NOT EXISTS class_config (
     value_of_time_eur_per_hour REAL,
     is_conjecture              INTEGER NOT NULL DEFAULT 0
 );
+
+-- Per-gate toll-free "access anchor" for `add_access_edges` (Phase 5b-follow-up-1).
+-- A gate's own coordinate IS the physical barrier, sitting on tolled tarmac by
+-- definition, so an `exclude=toll` OSRM query straight to it can return NoRoute even
+-- when a real driver reaches the barrier fine - Phase 3c's toll-tagging audit already
+-- found this is usually NOT a "toll tag starts too early" problem (the immediate access
+-- road is typically not toll-tagged at all - reports/phase3c.md section 3b) but a
+-- broader graph-connectivity gap: the gate's local toll-free road pocket doesn't connect
+-- through to the rest of the toll-free network without eventually crossing a toll
+-- segment somewhere close by. `tollroute.etl.access_anchors` finds, per affected gate,
+-- the nearest point that is both toll-free-reachable AND verified NOT to be an isolated
+-- pocket (it can also reach at least one widely-spread reference city toll-free).
+-- apron_distance_m/apron_duration_s is the plain (toll allowed) OSRM leg from that anchor
+-- to the gate's own coordinate - short by construction (nearest-candidate search), so
+-- letting the final local hop use toll tarmac cannot resurrect the Phase 1c free-ride bug
+-- (`exclude=toll` on the *whole* access edge is what fixed that; this table only ever
+-- contributes a few hundred metres right at the barrier). No row for a gare_id means no
+-- reachable anchor was found - `add_access_edges` falls back to its pre-existing "leg is
+-- None -> omitted, gap logged" behaviour.
+CREATE TABLE IF NOT EXISTS access_anchors (
+    gare_id          INTEGER PRIMARY KEY,
+    anchor_lat       REAL NOT NULL,
+    anchor_lon       REAL NOT NULL,
+    apron_distance_m REAL NOT NULL,
+    apron_duration_s REAL NOT NULL,
+    FOREIGN KEY (gare_id) REFERENCES gates (gare_id)
+);

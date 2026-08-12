@@ -118,6 +118,13 @@ class Graph:
     # alongside it so add_access_edges can OSRM-route to/from any gate
     # without a second DB round-trip.
     gate_coords: dict[int, tuple[float, float]] = field(default_factory=dict)
+    # Phase 5b-follow-up-1: gare_id -> (anchor_lat, anchor_lon, apron_distance_m,
+    # apron_duration_s), for gates whose own coordinate isn't directly toll-free
+    # reachable (it's the physical barrier, sitting on tolled tarmac by definition -
+    # see tollroute.etl.access_anchors' docstring for the investigation). Only gates
+    # that needed one have an entry; `add_access_edges` uses the raw `gate_coords`
+    # entry unchanged for every other gate.
+    access_anchors: dict[int, tuple[float, float, float, float]] = field(default_factory=dict)
     # Phase 4c-follow-up-3: cache of routing.build_edge_arrays's numpy arrays
     # for exactly `edges[:static_edge_count]` - the edges present right after
     # `build_graph` finishes, before any per-request access edge is added.
@@ -177,6 +184,25 @@ def _gate_rows(conn: sqlite3.Connection) -> list[tuple[int, float, float]]:
         "AND gare_id NOT IN (SELECT gare_id FROM suspect_gates) "
         "ORDER BY gare_id"
     ).fetchall()
+
+
+def _access_anchor_rows(conn: sqlite3.Connection) -> dict[int, tuple[float, float, float, float]]:
+    """Phase 5b-follow-up-1's precomputed anchors (tollroute.etl.access_anchors),
+    keyed by gare_id. Empty for a DB the precompute script hasn't been run against
+    yet (e.g. most unit-test fixture DBs) - `access_anchors` not existing at all is
+    a normal, expected state, not an error, so it's caught specifically here rather
+    than let a bare `except Exception` hide an unrelated real failure.
+    """
+    try:
+        rows = conn.execute(
+            "SELECT gare_id, anchor_lat, anchor_lon, apron_distance_m, apron_duration_s "
+            "FROM access_anchors"
+        ).fetchall()
+    except sqlite3.OperationalError as exc:
+        if "no such table" not in str(exc):
+            raise
+        return {}
+    return {gare_id: (a_lat, a_lon, dist_m, dur_s) for gare_id, a_lat, a_lon, dist_m, dur_s in rows}
 
 
 # osrm-routed's default --max-table-size caps max(len(sources), len(destinations))
@@ -280,7 +306,10 @@ def build_graph(
         pid = physical_gate_id_of.get(gid)
         return None if pid is None else matrix_index_of_physical_id[pid]
 
-    graph = Graph(gate_coords={gid: (lat, lon) for gid, (lat, lon) in zip(gare_ids, coords)})
+    graph = Graph(
+        gate_coords={gid: (lat, lon) for gid, (lat, lon) in zip(gare_ids, coords)},
+        access_anchors=_access_anchor_rows(conn),
+    )
 
     for gid in gare_ids:
         in_node = Node(gid, NodeRole.IN)
@@ -548,6 +577,14 @@ def add_access_edges(
     warm request under the spec's ~300 ms budget. OUT and OUT_TOLL share the
     same physical gate coordinate, so the exit-side table is queried once per
     gate id (not once per role) and its result reused for both roles.
+
+    **Phase 5b-follow-up-1:** a gate with a `graph.access_anchors` entry is
+    queried at its precomputed anchor coordinate instead of its own (the
+    gate's own coordinate is the physical barrier, on tolled tarmac by
+    definition, and for some barriers that's an unreachable pocket in the
+    `exclude=toll` graph even though a real driver gets there fine - see
+    `tollroute.etl.access_anchors`), with the anchor's short "apron" leg
+    added back onto whatever duration/distance OSRM returns.
     """
     origin_node = Node(-1, NodeRole.IN)
     destination_node = Node(-2, NodeRole.OUT)
@@ -558,8 +595,18 @@ def add_access_edges(
     exit_gids = sorted(
         {n.gare_id for n in graph.node_index if n.gare_id >= 0 and n.role in (NodeRole.OUT, NodeRole.OUT_TOLL)}
     )
-    entry_coords = [graph.gate_coords[gid] for gid in entry_gids]
-    exit_coords = [graph.gate_coords[gid] for gid in exit_gids]
+    # Phase 5b-follow-up-1: query a gate's precomputed anchor instead of its own
+    # coordinate when one exists (see `tollroute.etl.access_anchors` - the gate's own
+    # coordinate is the physical barrier, on tolled tarmac by definition, and for some
+    # barriers that makes it an unreachable pocket in the exclude=toll graph even
+    # though a real driver gets there fine). The anchor's apron_distance_m/duration_s
+    # is added back onto whatever leg OSRM returns, below.
+    def _query_coord(gid: int) -> tuple[float, float]:
+        anchor = graph.access_anchors.get(gid)
+        return (anchor[0], anchor[1]) if anchor is not None else graph.gate_coords[gid]
+
+    entry_coords = [_query_coord(gid) for gid in entry_gids]
+    exit_coords = [_query_coord(gid) for gid in exit_gids]
 
     # exclude=toll on both sides: the origin hasn't paid to enter the tolled
     # network yet (its approach must not ride a tolled section for free ahead
@@ -587,19 +634,26 @@ def add_access_edges(
         entry_legs = entry_future.result()
         exit_legs = exit_future.result()
 
+    def _with_apron(gid: int, duration: float, distance: float) -> tuple[float, float]:
+        anchor = graph.access_anchors.get(gid)
+        if anchor is None:
+            return duration, distance
+        _, _, apron_distance_m, apron_duration_s = anchor
+        return duration + apron_duration_s, distance + apron_distance_m
+
     no_toll_free_access_count = 0
     for gid, leg in zip(entry_gids, entry_legs):
         if leg is None:
             no_toll_free_access_count += 1
             continue
-        duration, distance = leg
+        duration, distance = _with_apron(gid, *leg)
         graph.add_edge(origin_node, Node(gid, NodeRole.IN), EdgeType.ACCESS, duration, distance)
 
     for gid, leg in zip(exit_gids, exit_legs):
         if leg is None:
             no_toll_free_access_count += 1
             continue
-        duration, distance = leg
+        duration, distance = _with_apron(gid, *leg)
         for role in (NodeRole.OUT, NodeRole.OUT_TOLL):
             node = Node(gid, role)
             if node not in graph.node_index:
