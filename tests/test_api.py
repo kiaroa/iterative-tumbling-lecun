@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tollroute import api
+from tollroute import geocode as geocode_mod
 from tollroute import graph as graph_mod
 from tollroute import logging as logging_mod
 from tollroute import osrm_client as osrm_client_mod
@@ -250,3 +251,107 @@ def test_health_endpoint_returns_503_when_osrm_mocked_down():
     body = resp.json()
     assert body["osrm_reachable"] is False
     assert body["matrix_loaded"] is True
+
+
+def _mock_geocode_client(coords_by_query: dict[str, tuple[float, float]]) -> httpx.Client:
+    def handler(request: httpx.Request) -> httpx.Response:
+        query = request.url.params["q"]
+        if query not in coords_by_query:
+            return httpx.Response(200, json={"type": "FeatureCollection", "features": []})
+        lat, lon = coords_by_query[query]
+        return httpx.Response(
+            200,
+            json={
+                "type": "FeatureCollection",
+                "features": [{"geometry": {"coordinates": [lon, lat]}, "properties": {"label": query}}],
+            },
+        )
+
+    return httpx.Client(transport=httpx.MockTransport(handler), base_url="http://ban.test")
+
+
+@requires_osrm
+def test_route_endpoint_resolves_free_text_address_same_as_coordinates():
+    # Phase 6b exit criterion: a city-name query must return the same result
+    # as the corresponding coordinates. The mocked BAN client returns
+    # DIJON's exact coordinates for "Dijon" so both requests hit the same
+    # cached_shape entry and must therefore agree exactly, not just approximately.
+    with TestClient(api.app) as client:
+        real_geocode_client = api.app.state.geocode_client
+        api.app.state.geocode_client = _mock_geocode_client({"Dijon": DIJON})
+        try:
+            address_resp = client.get(
+                "/route", params={"origin_address": "Dijon", "destination_lat": LYON[0],
+                                   "destination_lon": LYON[1], "vehicle_class": 1}
+            )
+        finally:
+            api.app.state.geocode_client = real_geocode_client
+        coord_resp = client.get("/route", params=_params(DIJON, LYON, vehicle_class=1))
+
+    assert address_resp.status_code == 200
+    assert coord_resp.status_code == 200
+    address_data = address_resp.json()
+    coord_data = coord_resp.json()
+    assert address_data["origin"] == coord_data["origin"] == {"lat": DIJON[0], "lon": DIJON[1]}
+    assert [o["toll_eur"] for o in address_data["options"]] == [o["toll_eur"] for o in coord_data["options"]]
+    assert [o["gates"] for o in address_data["options"]] == [o["gates"] for o in coord_data["options"]]
+
+
+@requires_osrm
+def test_route_endpoint_address_response_has_match_tier_and_agreement_on_every_gate():
+    # Phase 6b's second exit condition: match_tier/match_agreement present
+    # on every response - unchanged from the coordinate path since the
+    # routing core itself never changes, only the input resolution step.
+    with TestClient(api.app) as client:
+        real_geocode_client = api.app.state.geocode_client
+        api.app.state.geocode_client = _mock_geocode_client({"Dijon": DIJON, "Lyon": LYON})
+        try:
+            resp = client.get(
+                "/route", params={"origin_address": "Dijon", "destination_address": "Lyon", "vehicle_class": 1}
+            )
+        finally:
+            api.app.state.geocode_client = real_geocode_client
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["options"], "expected at least one option"
+    for option in data["options"]:
+        assert option["gate_detail"], "expected at least one gate on a real route"
+        for gate in option["gate_detail"]:
+            assert "match_tier" in gate
+            assert "match_agreement" in gate
+
+
+@requires_osrm
+@pytest.mark.parametrize(
+    "params",
+    [
+        {"origin_lat": DIJON[0], "origin_lon": DIJON[1], "origin_address": "Dijon"},  # both forms
+        {"origin_lat": DIJON[0]},  # lat without lon
+        {"origin_lon": DIJON[1]},  # lon without lat
+        {},  # neither form
+    ],
+)
+def test_route_endpoint_rejects_ambiguous_or_missing_origin(params):
+    with TestClient(api.app) as client:
+        resp = client.get(
+            "/route",
+            params={**params, "destination_lat": LYON[0], "destination_lon": LYON[1], "vehicle_class": 1},
+        )
+    assert resp.status_code == 400
+
+
+@requires_osrm
+def test_route_endpoint_geocode_unreachable_returns_422(monkeypatch):
+    monkeypatch.setattr(geocode_mod, "RETRY_DELAY_S", 0.01)
+    with TestClient(api.app) as client:
+        real_geocode_client = api.app.state.geocode_client
+        api.app.state.geocode_client = httpx.Client(base_url="http://127.0.0.1:1", timeout=2.0)
+        try:
+            resp = client.get(
+                "/route",
+                params={"origin_address": "Dijon", "destination_lat": LYON[0], "destination_lon": LYON[1]},
+            )
+        finally:
+            api.app.state.geocode_client = real_geocode_client
+    assert resp.status_code == 422
