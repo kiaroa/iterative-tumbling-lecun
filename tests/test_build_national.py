@@ -43,7 +43,11 @@ def test_national_build_summary_matches_known_disposition_counts(built):
     # free_transfer / 238 drop, all 326 blank endpoints resolved.
     assert summary["raw_gate_count"] == 956
     assert summary["raw_fare_count"] == 57378
-    assert summary["final_fare_count"] == 57378 - 238
+    # +1 vs the raw/zero-price arithmetic below: Phase 5b-follow-up-2's
+    # seed_millau_override runs after this module's own raw-count bookkeeping and
+    # adds one self-loop fares row (gate 900001, the Millau viaduct) that was never
+    # part of the 57,378-row raw load in the first place.
+    assert summary["final_fare_count"] == 57378 - 238 + 1
     assert summary["zero_price_tally"] == {"free_section": 307, "free_transfer": 6, "drop": 238}
     assert summary["rematch_matched"] == 326
     assert summary["rematch_dropped"] == 0

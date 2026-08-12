@@ -181,6 +181,12 @@ def run(
             conn, od_pairs_path=od_pairs_path, gare_master_path=gare_master_path
         )
 
+        # Phase 5b-follow-up-2: seeded after snap-quality/distance-error, not before -
+        # the Millau viaduct gate's coordinate is already the verified real barrier
+        # location (tollroute/etl/freeflow.py), not a geocoded one needing re-snapping
+        # or a distance-error check against od_pairs.csv (it has no od_pairs row at all).
+        freeflow.seed_millau_override(conn)
+
         cost.seed_class_config(conn)
         conn.commit()
 

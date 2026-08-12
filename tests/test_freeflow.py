@@ -99,6 +99,77 @@ def test_run_is_idempotent(tmp_path):
         conn.close()
 
 
+def test_seed_millau_override_writes_gate_selfloop_fare_and_provenance(tmp_path):
+    """Phase 5b-follow-up-2: Millau is seeded as one real self-loop gate (same
+    shape as A14's 5 dataset self-loop fares), not a two-endpoint fork - class 1
+    is sourced directly (is_conjecture=0), classes 2-5 are interpolated from
+    APRR's ratios and flagged is_conjecture=1 in `freeflow_override` (fee
+    provenance bookkeeping only; the graph builder never reads that table).
+    """
+    db_path = tmp_path / "millau.sqlite"
+    conn = sqlite3.connect(db_path)
+    try:
+        assert ff.seed_millau_override(conn) is True
+
+        gate = conn.execute(
+            "SELECT canonical_name, operators, snap_lat, snap_lon FROM gates WHERE gare_id = ?",
+            (ff.MILLAU_GARE_ID,),
+        ).fetchone()
+        assert gate is not None
+        assert gate[1] == "CEVM"
+        assert (gate[2], gate[3]) == pytest.approx(ff.MILLAU_BARRIER_COORD)
+
+        fare = conn.execute(
+            "SELECT operator, class1, class2, class3, class4, class5 "
+            "FROM fares WHERE from_gare_id = ? AND to_gare_id = ?",
+            (ff.MILLAU_GARE_ID, ff.MILLAU_GARE_ID),
+        ).fetchone()
+        assert fare is not None
+        assert fare[0] == "CEVM"
+        assert fare[1] == pytest.approx(11.30)
+        assert all(c > 0 for c in fare[2:])
+
+        rows = conn.execute(
+            "SELECT vehicle_class, flat_fee_eur, operator, is_conjecture "
+            "FROM freeflow_override WHERE corridor = ? ORDER BY vehicle_class",
+            (ff.MILLAU_VIADUCT_CORRIDOR,),
+        ).fetchall()
+        assert [r[0] for r in rows] == [1, 2, 3, 4, 5]
+        assert all(r[2] == "CEVM" for r in rows)
+        assert rows[0][1] == pytest.approx(11.30)
+        assert rows[0][3] == 0  # sourced, not conjecture
+        for _vehicle_class, fee, _operator, is_conjecture in rows[1:]:
+            assert is_conjecture == 1
+            assert fee > 0
+    finally:
+        conn.close()
+
+
+def test_seed_millau_override_is_idempotent_and_reflects_reruns(tmp_path):
+    db_path = tmp_path / "millau.sqlite"
+    conn = sqlite3.connect(db_path)
+    try:
+        ff.seed_millau_override(conn)
+        ff.seed_millau_override(conn)  # INSERT OR REPLACE: must not duplicate rows
+
+        (gate_count,) = conn.execute(
+            "SELECT COUNT(*) FROM gates WHERE gare_id = ?", (ff.MILLAU_GARE_ID,)
+        ).fetchone()
+        assert gate_count == 1
+        (fare_count,) = conn.execute(
+            "SELECT COUNT(*) FROM fares WHERE from_gare_id = ? AND to_gare_id = ?",
+            (ff.MILLAU_GARE_ID, ff.MILLAU_GARE_ID),
+        ).fetchone()
+        assert fare_count == 1
+        (override_count,) = conn.execute(
+            "SELECT COUNT(*) FROM freeflow_override WHERE corridor = ?",
+            (ff.MILLAU_VIADUCT_CORRIDOR,),
+        ).fetchone()
+        assert override_count == 5  # one row per vehicle class, not 10
+    finally:
+        conn.close()
+
+
 def test_absent_corridor_would_flag_override_needed():
     # Synthetic: a corridor whose gate is in gare_master but has no od_pairs rows
     # must be flagged as needing an override (guards the branch the real data never hits).

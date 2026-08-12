@@ -70,6 +70,145 @@ FREEFLOW_CORRIDORS = ("A79", "A13", "A14")
 # Written into suspect_gates.source_phase so later phases can tell who quarantined a gate.
 SOURCE_PHASE = "2c"
 
+# Phase 5b-follow-up-2: the Millau viaduct (A75, north of Béziers/Montpellier) is a genuine
+# single-structure toll concession operated by CEVM (Compagnie Eiffage du Viaduc de Millau),
+# not one of this project's 13 dataset operators, so it never appears in gare_master.csv or
+# od_pairs.csv - Phase 1b/1d/5b already documented the A75 corridor south of Clermont-Ferrand
+# as untolled without a CEVM entry.
+#
+# **Revised design (this item's own first attempt, reverted - see reports/
+# phase5b_followup2_millau.md for the full investigation):** the first attempt modelled Millau
+# as two synthetic gates ~13 km apart (guessed "interchange" coordinates) joined by a priced
+# TOLL edge, reasoning the crossing needed "real endpoints" unlike A14's single-gantry
+# self-loop. That reasoning, and its supporting claim that this build's OSM extract "doesn't
+# tag the viaduct toll=yes at all", were never actually verified against live data - checked
+# directly for this revision: the OSM extract (`osrm/data/france.osm.pbf`) tags the viaduct's
+# own ways (e.g. way 4296812 "Viaduc de Millau") `toll=yes`, and the real barrier sits at two
+# `barrier=toll_booth` nodes (osm nodes 2032423306/2032423307, one per carriageway) at
+# ~(44.13414, 3.02556). A direct OSRM query confirms this coordinate is a genuine mandatory
+# chokepoint: `/route` with `exclude=toll` returns `NoRoute` both from Clermont-Ferrand to it
+# and from it to Montpellier (no toll-free path exists to/from that exact point at all) -
+# exactly the semantics `tollroute.graph.build_graph`'s existing A14-style self-loop handling
+# already relies on for a real single-gantry gate. The first attempt's two far-apart guessed
+# coordinates, by contrast, turned out to sit off the motorway entirely (a direct OSRM route
+# between them cut through Millau's town streets, never touching the viaduct in either
+# `exclude=toll` mode), so the priced edge was never actually reachable/selected: the
+# "fastest" Clermont-Ferrand->Montpellier route used the synthetic gate purely as a
+# same-cost pass-through waypoint via ordinary access edges, at toll_eur=0 - the flagship
+# acceptance criterion this item was never met on the first attempt (see the report for the
+# full trace). This revision instead seeds Millau as one ordinary self-loop gate at the real
+# barrier coordinate, exactly like A14's 5 existing dataset self-loop fares - no new graph.py
+# code needed at all; `build_graph`'s existing self-loop handling and (given the barrier's own
+# coordinate is `exclude=toll`-unreachable, per the NoRoute check above)
+# `tollroute.etl.access_anchors`'s existing entry/exit anchor mechanism both already apply
+# unchanged. `access_anchors.run()` must be re-run after this seed (not part of
+# `build_national.run()`'s own pipeline - see that module's docstring) for the new gate to be
+# reachable at all.
+#
+# Fee: class 1 (11.30 EUR, off-peak/"normale" 2026 rate) is corroborated by two independent
+# reads - Phase 5b's original report citing the operator's own tariff PDF, and this item's own
+# web search of a third-party summary quoting the same figure - so it is NOT flagged
+# is_conjecture. Classes 2-5 could not be corroborated: leviaducdemillau.com's tariff PDF/page
+# return HTTP 403 in this build environment (same access pattern already hit by Phase 2a/5a
+# against autoroutes.fr/vinci-autoroutes.com) and two independent third-party summaries quoted
+# mutually inconsistent full-class grids (one: 10.68/16.60/30.00/43.00/7.10 EUR for
+# classes 1-5; another: 5.10/7.65/10.20/-/2.50 EUR for classes 1-3 + motorcycles, no class
+# 4/5) - neither reconciles with the corroborated class-1 figure or with each other, so
+# neither is trustworthy enough to use directly. Classes 2-5 are instead interpolated from
+# APRR's own verified (Phase 5a fare-oracle-checked, exact-to-the-cent) class-N/class-1 price
+# ratios applied to Millau's sourced class-1 figure, and flagged `is_conjecture=1` - the same
+# "checked, not assumed" interpolation convention `cost.seed_class_config` already uses for
+# class_config's own indicative figures.
+MILLAU_VIADUCT_CORRIDOR = "A75-MILLAU"
+MILLAU_VIADUCT_OPERATOR = "CEVM"
+MILLAU_GARE_ID = 900001  # synthetic - real gare_master.csv ids run 1-956, clearly out of range
+MILLAU_CANONICAL_NAME = "PEAGE VIADUC DE MILLAU"
+# Midpoint of OSM nodes 2032423306/2032423307 (barrier=toll_booth, one per carriageway),
+# sourced directly from the OSM extract this build's OSRM instance is served from - not
+# conjecture. Verified (see module comment above) to be an `exclude=toll` NoRoute chokepoint.
+MILLAU_BARRIER_COORD = (44.134137, 3.025560)
+MILLAU_CLASS1_FEE_EUR = 11.30  # sourced, off-peak 2026 (leviaducdemillau.com); not conjecture
+# APRR class-N/class-1 ratios (median over ~3,000 non-zero-priced APRR fare rows in
+# od_pairs.csv), applied to MILLAU_CLASS1_FEE_EUR - interpolated, flagged is_conjecture=1.
+_MILLAU_CLASS_RATIOS = {2: 1.5466, 3: 2.4801, 4: 3.3333, 5: 0.5849}
+MILLAU_FEES_EUR: dict[int, float] = {1: MILLAU_CLASS1_FEE_EUR} | {
+    cls: round(MILLAU_CLASS1_FEE_EUR * ratio, 2) for cls, ratio in _MILLAU_CLASS_RATIOS.items()
+}
+MILLAU_NOTE = (
+    "Millau viaduct (CEVM), 2026 off-peak tariff. Class 1 sourced directly to "
+    "leviaducdemillau.com's published tariff (corroborated by two independent reads). "
+    "Classes 2-5 interpolated from APRR's verified class-N/class-1 price ratios applied to "
+    "the sourced class-1 figure (official PDF unreachable in this build environment - "
+    "HTTP 403 - and third-party summaries for classes 2-5 disagreed with each other and with "
+    "the corroborated class-1 figure)."
+)
+
+
+def seed_millau_override(conn: sqlite3.Connection) -> bool:
+    """Idempotently seed the Millau viaduct as a single self-loop toll gate.
+
+    Three tables, one transaction: `gates` (a real gate row at the verified barrier
+    coordinate, so it participates in `build_graph`/`access_anchors` exactly like any
+    other dataset gate), `fares` (a self-loop row, from_gare_id == to_gare_id, the same
+    shape A14's 5 real self-loop rows already use), and `freeflow_override` (fee-only
+    provenance bookkeeping - sourced vs. interpolated - kept for documentation, not
+    read by the graph builder).
+
+    Returns True if rows were (re-)written. Uses INSERT OR REPLACE (not "only if
+    empty" like `cost.seed_class_config`) so a later re-run of the national build
+    always reflects this module's current sourced/interpolated figures rather than
+    silently keeping a stale prior run's numbers.
+    """
+    conn.executescript(SCHEMA_PATH.read_text())
+
+    conn.execute(
+        "INSERT OR REPLACE INTO gates (gare_id, canonical_name, operators, snap_lat, snap_lon) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (MILLAU_GARE_ID, MILLAU_CANONICAL_NAME, MILLAU_VIADUCT_OPERATOR, *MILLAU_BARRIER_COORD),
+    )
+    conn.execute(
+        "DELETE FROM fares WHERE from_gare_id = ? AND to_gare_id = ?",
+        (MILLAU_GARE_ID, MILLAU_GARE_ID),
+    )
+    conn.execute(
+        "INSERT INTO fares (from_gare_id, to_gare_id, operator, class1, class2, class3, "
+        "class4, class5) VALUES (:gid, :gid, :operator, :c1, :c2, :c3, :c4, :c5)",
+        {
+            "gid": MILLAU_GARE_ID,
+            "operator": MILLAU_VIADUCT_OPERATOR,
+            "c1": MILLAU_FEES_EUR[1],
+            "c2": MILLAU_FEES_EUR[2],
+            "c3": MILLAU_FEES_EUR[3],
+            "c4": MILLAU_FEES_EUR[4],
+            "c5": MILLAU_FEES_EUR[5],
+        },
+    )
+    conn.executemany(
+        "INSERT OR REPLACE INTO freeflow_override "
+        "(corridor, vehicle_class, flat_fee_eur, note, operator, is_conjecture) "
+        "VALUES (:corridor, :vehicle_class, :flat_fee_eur, :note, :operator, :is_conjecture)",
+        [
+            {
+                "corridor": MILLAU_VIADUCT_CORRIDOR,
+                "vehicle_class": vehicle_class,
+                "flat_fee_eur": fee,
+                "note": MILLAU_NOTE,
+                "operator": MILLAU_VIADUCT_OPERATOR,
+                "is_conjecture": 0 if vehicle_class == 1 else 1,
+            }
+            for vehicle_class, fee in MILLAU_FEES_EUR.items()
+        ],
+    )
+    conn.commit()
+    logger.info(
+        "Millau viaduct seeded: gate %d self-loop fare, %s class1=%.2f EUR (sourced), "
+        "classes 2-5 interpolated (flagged is_conjecture)",
+        MILLAU_GARE_ID,
+        MILLAU_VIADUCT_OPERATOR,
+        MILLAU_FEES_EUR[1],
+    )
+    return True
+
 
 @dataclass(frozen=True)
 class CoordinatelessGate:

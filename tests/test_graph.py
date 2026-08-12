@@ -5,7 +5,7 @@ import pytest
 
 from tollroute import graph as graph_mod
 from tollroute import routing
-from tollroute.etl import coverage_audit, load, snap_report
+from tollroute.etl import coverage_audit, freeflow, load, snap_report
 
 
 def _osrm_reachable() -> bool:
@@ -263,3 +263,51 @@ def test_a14_selfloop_becomes_priced_freeflow_edge_not_dropped():
         graph_mod.EdgeType.DWELL,
     ]
     assert route.toll_eur == pytest.approx(6.6)
+
+
+def test_millau_seed_becomes_priced_selfloop_edge_via_existing_a14_mechanism():
+    """Phase 5b-follow-up-2 (revised): `freeflow.seed_millau_override` inserts one
+    real self-loop gate/fares row (same shape A14's 5 dataset self-loop rows already
+    use - see `test_a14_selfloop_becomes_priced_freeflow_edge_not_dropped` above),
+    so `build_graph`'s existing self-loop handling wires it up correctly with no
+    new graph.py code at all. This is the design this item settled on after an
+    initial two-synthetic-gate "fork" attempt was found, on direct empirical
+    verification, to never actually charge the fee (see reports/
+    phase5b_followup2_millau.md and `tollroute/etl/freeflow.py`'s module comment
+    for the full investigation).
+    """
+    conn = sqlite3.connect(":memory:")
+    conn.executescript(load.SCHEMA_PATH.read_text())
+    conn.commit()
+    freeflow.seed_millau_override(conn)
+
+    g = graph_mod.build_graph(conn)
+    conn.close()
+
+    selfloop_edges = [
+        e
+        for e in g.edges
+        if e.edge_type == graph_mod.EdgeType.TOLL
+        and e.from_node == graph_mod.Node(freeflow.MILLAU_GARE_ID, graph_mod.NodeRole.OUT)
+        and e.to_node == graph_mod.Node(freeflow.MILLAU_GARE_ID, graph_mod.NodeRole.IN_TOLL)
+    ]
+    assert len(selfloop_edges) == 1
+    edge = selfloop_edges[0]
+    assert edge.operator == "CEVM"
+    assert edge.distance_m == 0.0
+    assert edge.duration_s == 0.0
+    assert edge.toll_eur[1] == pytest.approx(11.30)
+    assert edge.toll_eur[2] > 0  # interpolated class present too
+
+    route = routing.find_route(
+        g,
+        graph_mod.Node(freeflow.MILLAU_GARE_ID, graph_mod.NodeRole.IN),
+        graph_mod.Node(freeflow.MILLAU_GARE_ID, graph_mod.NodeRole.OUT_TOLL),
+        vehicle_class=1,
+    )
+    assert [e.edge_type for e in route.edges] == [
+        graph_mod.EdgeType.DWELL,
+        graph_mod.EdgeType.TOLL,
+        graph_mod.EdgeType.DWELL,
+    ]
+    assert route.toll_eur == pytest.approx(11.30)

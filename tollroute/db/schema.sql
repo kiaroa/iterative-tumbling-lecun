@@ -101,11 +101,23 @@ CREATE TABLE IF NOT EXISTS suspect_gates (
 -- free-flow audit (tollroute/etl/freeflow.py) found A79, A13 and A14 all present in od_pairs,
 -- so no override is required yet. Ready for a future free-flow corridor genuinely missing its
 -- fares (one row per corridor per vehicle class).
+--
+-- operator/is_conjecture (Phase 5b-follow-up-2, nullable/default 0): fee-provenance
+-- bookkeeping for a genuine single-structure concession (e.g. the Millau viaduct/CEVM) that
+-- sits on a corridor this project otherwise treats as untolled. Such a structure has no
+-- dataset gate at all, so it is seeded as a real self-loop gate/fares row instead (same
+-- shape A14's 5 dataset self-loop rows already use, wired by `build_graph`'s existing
+-- self-loop handling with no override-table involvement) - this table only records where
+-- each vehicle class's fee came from. is_conjecture flags a vehicle class whose fee was
+-- interpolated from another class's sourced figure rather than read directly from the
+-- operator's own tariff (same convention as class_config.is_conjecture).
 CREATE TABLE IF NOT EXISTS freeflow_override (
-    corridor      TEXT NOT NULL,
-    vehicle_class INTEGER NOT NULL,
-    flat_fee_eur  REAL NOT NULL,
-    note          TEXT,
+    corridor        TEXT NOT NULL,
+    vehicle_class   INTEGER NOT NULL,
+    flat_fee_eur    REAL NOT NULL,
+    note            TEXT,
+    operator        TEXT,
+    is_conjecture   INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (corridor, vehicle_class)
 );
 
