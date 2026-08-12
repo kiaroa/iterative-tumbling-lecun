@@ -118,13 +118,18 @@ class Graph:
     # alongside it so add_access_edges can OSRM-route to/from any gate
     # without a second DB round-trip.
     gate_coords: dict[int, tuple[float, float]] = field(default_factory=dict)
-    # Phase 5b-follow-up-1: gare_id -> (anchor_lat, anchor_lon, apron_distance_m,
-    # apron_duration_s), for gates whose own coordinate isn't directly toll-free
-    # reachable (it's the physical barrier, sitting on tolled tarmac by definition -
-    # see tollroute.etl.access_anchors' docstring for the investigation). Only gates
-    # that needed one have an entry; `add_access_edges` uses the raw `gate_coords`
-    # entry unchanged for every other gate.
-    access_anchors: dict[int, tuple[float, float, float, float]] = field(default_factory=dict)
+    # Phase 5b-follow-up-1 (direction split: Phase 5b-follow-up-1-continued):
+    # gare_id -> (anchor_lat, anchor_lon, apron_distance_m, apron_duration_s), for gates
+    # whose own coordinate isn't directly toll-free reachable in that direction (it's the
+    # physical barrier, sitting on tolled tarmac by definition - see
+    # tollroute.etl.access_anchors' docstring for the investigation). Separate dicts
+    # because reachability on a divided/oneway motorway is directional - a gate's entry
+    # anchor (used for origin->gate IN-node legs) and exit anchor (used for gate->
+    # destination OUT/OUT_TOLL-node legs) are not interchangeable and were verified to
+    # often differ. Only gates that needed one for that direction have an entry;
+    # `add_access_edges` uses the raw `gate_coords` entry unchanged for every other gate.
+    access_anchors_entry: dict[int, tuple[float, float, float, float]] = field(default_factory=dict)
+    access_anchors_exit: dict[int, tuple[float, float, float, float]] = field(default_factory=dict)
     # Phase 4c-follow-up-3: cache of routing.build_edge_arrays's numpy arrays
     # for exactly `edges[:static_edge_count]` - the edges present right after
     # `build_graph` finishes, before any per-request access edge is added.
@@ -186,23 +191,30 @@ def _gate_rows(conn: sqlite3.Connection) -> list[tuple[int, float, float]]:
     ).fetchall()
 
 
-def _access_anchor_rows(conn: sqlite3.Connection) -> dict[int, tuple[float, float, float, float]]:
+def _access_anchor_rows(
+    conn: sqlite3.Connection,
+) -> tuple[dict[int, tuple[float, float, float, float]], dict[int, tuple[float, float, float, float]]]:
     """Phase 5b-follow-up-1's precomputed anchors (tollroute.etl.access_anchors),
-    keyed by gare_id. Empty for a DB the precompute script hasn't been run against
-    yet (e.g. most unit-test fixture DBs) - `access_anchors` not existing at all is
-    a normal, expected state, not an error, so it's caught specifically here rather
-    than let a bare `except Exception` hide an unrelated real failure.
+    keyed by gare_id, split into (entry, exit) dicts per Phase 5b-follow-up-1-continued's
+    directional fix. Empty for a DB the precompute script hasn't been run against yet
+    (e.g. most unit-test fixture DBs) - `access_anchors` not existing at all is a normal,
+    expected state, not an error, so it's caught specifically here rather than let a bare
+    `except Exception` hide an unrelated real failure.
     """
     try:
         rows = conn.execute(
-            "SELECT gare_id, anchor_lat, anchor_lon, apron_distance_m, apron_duration_s "
+            "SELECT gare_id, direction, anchor_lat, anchor_lon, apron_distance_m, apron_duration_s "
             "FROM access_anchors"
         ).fetchall()
     except sqlite3.OperationalError as exc:
         if "no such table" not in str(exc):
             raise
-        return {}
-    return {gare_id: (a_lat, a_lon, dist_m, dur_s) for gare_id, a_lat, a_lon, dist_m, dur_s in rows}
+        return {}, {}
+    entry: dict[int, tuple[float, float, float, float]] = {}
+    exit_: dict[int, tuple[float, float, float, float]] = {}
+    for gare_id, direction, a_lat, a_lon, dist_m, dur_s in rows:
+        (entry if direction == "entry" else exit_)[gare_id] = (a_lat, a_lon, dist_m, dur_s)
+    return entry, exit_
 
 
 # osrm-routed's default --max-table-size caps max(len(sources), len(destinations))
@@ -306,9 +318,11 @@ def build_graph(
         pid = physical_gate_id_of.get(gid)
         return None if pid is None else matrix_index_of_physical_id[pid]
 
+    access_anchors_entry, access_anchors_exit = _access_anchor_rows(conn)
     graph = Graph(
         gate_coords={gid: (lat, lon) for gid, (lat, lon) in zip(gare_ids, coords)},
-        access_anchors=_access_anchor_rows(conn),
+        access_anchors_entry=access_anchors_entry,
+        access_anchors_exit=access_anchors_exit,
     )
 
     for gid in gare_ids:
@@ -578,13 +592,15 @@ def add_access_edges(
     same physical gate coordinate, so the exit-side table is queried once per
     gate id (not once per role) and its result reused for both roles.
 
-    **Phase 5b-follow-up-1:** a gate with a `graph.access_anchors` entry is
-    queried at its precomputed anchor coordinate instead of its own (the
-    gate's own coordinate is the physical barrier, on tolled tarmac by
-    definition, and for some barriers that's an unreachable pocket in the
-    `exclude=toll` graph even though a real driver gets there fine - see
-    `tollroute.etl.access_anchors`), with the anchor's short "apron" leg
-    added back onto whatever duration/distance OSRM returns.
+    **Phase 5b-follow-up-1 (direction split: Phase 5b-follow-up-1-continued):** a gate
+    with a `graph.access_anchors_entry`/`access_anchors_exit` entry is queried at its
+    precomputed anchor coordinate instead of its own (the gate's own coordinate is the
+    physical barrier, on tolled tarmac by definition, and for some barriers that's an
+    unreachable pocket in the `exclude=toll` graph even though a real driver gets there
+    fine - see `tollroute.etl.access_anchors`), with the anchor's short "apron" leg added
+    back onto whatever duration/distance OSRM returns. Entry and exit use separate anchors
+    because reachability on a divided/oneway motorway is directional - reusing one shared
+    anchor for both was verified to silently break entry access edges for most gates.
     """
     origin_node = Node(-1, NodeRole.IN)
     destination_node = Node(-2, NodeRole.OUT)
@@ -600,13 +616,19 @@ def add_access_edges(
     # coordinate is the physical barrier, on tolled tarmac by definition, and for some
     # barriers that makes it an unreachable pocket in the exclude=toll graph even
     # though a real driver gets there fine). The anchor's apron_distance_m/duration_s
-    # is added back onto whatever leg OSRM returns, below.
-    def _query_coord(gid: int) -> tuple[float, float]:
-        anchor = graph.access_anchors.get(gid)
+    # is added back onto whatever leg OSRM returns, below. Entry and exit each look up
+    # their own anchor dict (Phase 5b-follow-up-1-continued: a shared anchor is not
+    # direction-safe on a divided/oneway motorway).
+    def _entry_query_coord(gid: int) -> tuple[float, float]:
+        anchor = graph.access_anchors_entry.get(gid)
         return (anchor[0], anchor[1]) if anchor is not None else graph.gate_coords[gid]
 
-    entry_coords = [_query_coord(gid) for gid in entry_gids]
-    exit_coords = [_query_coord(gid) for gid in exit_gids]
+    def _exit_query_coord(gid: int) -> tuple[float, float]:
+        anchor = graph.access_anchors_exit.get(gid)
+        return (anchor[0], anchor[1]) if anchor is not None else graph.gate_coords[gid]
+
+    entry_coords = [_entry_query_coord(gid) for gid in entry_gids]
+    exit_coords = [_exit_query_coord(gid) for gid in exit_gids]
 
     # exclude=toll on both sides: the origin hasn't paid to enter the tolled
     # network yet (its approach must not ride a tolled section for free ahead
@@ -634,8 +656,10 @@ def add_access_edges(
         entry_legs = entry_future.result()
         exit_legs = exit_future.result()
 
-    def _with_apron(gid: int, duration: float, distance: float) -> tuple[float, float]:
-        anchor = graph.access_anchors.get(gid)
+    def _with_apron(
+        anchors: dict[int, tuple[float, float, float, float]], gid: int, duration: float, distance: float
+    ) -> tuple[float, float]:
+        anchor = anchors.get(gid)
         if anchor is None:
             return duration, distance
         _, _, apron_distance_m, apron_duration_s = anchor
@@ -646,14 +670,14 @@ def add_access_edges(
         if leg is None:
             no_toll_free_access_count += 1
             continue
-        duration, distance = _with_apron(gid, *leg)
+        duration, distance = _with_apron(graph.access_anchors_entry, gid, *leg)
         graph.add_edge(origin_node, Node(gid, NodeRole.IN), EdgeType.ACCESS, duration, distance)
 
     for gid, leg in zip(exit_gids, exit_legs):
         if leg is None:
             no_toll_free_access_count += 1
             continue
-        duration, distance = _with_apron(gid, *leg)
+        duration, distance = _with_apron(graph.access_anchors_exit, gid, *leg)
         for role in (NodeRole.OUT, NodeRole.OUT_TOLL):
             node = Node(gid, role)
             if node not in graph.node_index:
