@@ -40,6 +40,13 @@ retry - `tollroute.osrm_client.baseline_route`) before the two heavier
 `/table` batches run; its duration/distance is also surfaced on the response
 as `baseline` (a "direct route, tolls allowed, ignoring the toll-minimising
 graph entirely" reference point a client can display for comparison).
+
+**Observability and ops (Phase 6a):** every `/route` response is logged as
+one structured record carrying every option's full gate chain
+(`tollroute.logging.log_route_response`) - see that module for the JSON
+formatter. `/health` asserts OSRM reachability and that the startup graph
+actually loaded gates/edges (not data freshness, which is an external
+process's job per spec); see `docs/ops.md` for the one-command rebuild.
 """
 
 from __future__ import annotations
@@ -52,9 +59,11 @@ from functools import lru_cache
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 
 from tollroute import cost
 from tollroute import graph as graph_mod
+from tollroute import logging as logging_mod
 from tollroute import osrm_client as osrm_client_mod
 from tollroute import response as response_mod
 from tollroute import routing
@@ -63,10 +72,12 @@ from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
 
 ROUTE_CACHE_MAXSIZE = 512
 GEOMETRY_TTL_S = 60.0
+HEALTH_CHECK_TIMEOUT_S = 2.0
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logging_mod.configure_logging()
     conn = sqlite3.connect(DEFAULT_DB_PATH)
     try:
         app.state.graph = graph_mod.build_graph(conn)
@@ -200,12 +211,40 @@ def get_route(
         app.state.geometry_cache[route_id] = (expiry, waypoints)
         option["route_id"] = route_id
 
+    logging_mod.log_route_response(origin, destination, vehicle_class, {**result, "options": options})
+
     return {
         "origin": {"lat": origin_lat, "lon": origin_lon},
         "destination": {"lat": destination_lat, "lon": destination_lon},
         **{k: v for k, v in result.items() if k != "options"},
         "options": options,
     }
+
+
+def _osrm_reachable(client: httpx.Client) -> bool:
+    """Cheap OSRM connectivity probe for `/health` (spec: "asserts OSRM
+    reachability", not data freshness) - a `/nearest` lookup near a point
+    inside the loaded France extract, accepting any HTTP response as proof
+    of reachability regardless of its `code` field (a coordinate genuinely
+    outside the graph would still answer, just with `NoSegment`)."""
+    try:
+        resp = client.get("/nearest/v1/car/2.3522,48.8566", timeout=HEALTH_CHECK_TIMEOUT_S)
+        return resp.status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+@app.get("/health")
+def get_health():
+    graph: graph_mod.Graph = app.state.graph
+    matrix_loaded = len(graph.nodes) > 0 and len(graph.edges) > 0
+    osrm_reachable = _osrm_reachable(app.state.osrm_client)
+    body = {
+        "osrm_reachable": osrm_reachable,
+        "matrix_loaded": matrix_loaded,
+        "gate_count": len(graph.gate_coords),
+    }
+    return JSONResponse(status_code=200 if (matrix_loaded and osrm_reachable) else 503, content=body)
 
 
 @app.get("/geometry/{route_id}")
