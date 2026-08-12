@@ -92,6 +92,20 @@ def baseline_route(
     Returns None (not an exception) for OSRM's own NoRoute - a genuine "no
     road connects these two points" is a real result, not an availability
     failure.
+
+    **Known non-determinism, measured not assumed (Phase 5c-follow-up-2,
+    `reports/phase5c_followup2_production_route_determinism.md`):** on a
+    near-tied corridor, `osrm-routed`'s MLD engine can return either of two
+    candidate routes (differing here by <=1.8% distance / <=6.1% duration)
+    across otherwise-identical repeat calls once thread count exceeds ~2 -
+    production runs at the host's full core count. This call is the one
+    OSRM interaction on the `/route` path not protected by the frozen,
+    precomputed gate-to-gate matrix that makes `tollroute.graph`'s own
+    Dijkstra route choice (`fastest`/`cheapest`/`best_value`, verified
+    unaffected across 45 repeat live requests) deterministic, so `baseline`
+    is the one field that can flip between two fresh (cache-miss) requests
+    for the same query. Left as-is deliberately: see the report for the
+    full tradeoff against pinning `osrm-routed --threads` service-wide.
     """
     o_lat, o_lon = origin
     d_lat, d_lon = destination
