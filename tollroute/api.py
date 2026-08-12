@@ -134,6 +134,7 @@ def _graph_copy(g: graph_mod.Graph) -> graph_mod.Graph:
         node_index=dict(g.node_index),
         edges=list(g.edges),
         gate_coords=dict(g.gate_coords),
+        access_anchors=dict(g.access_anchors),
         static_edge_count=g.static_edge_count,
         static_edge_arrays=g.static_edge_arrays,
     )
