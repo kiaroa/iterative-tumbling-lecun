@@ -47,6 +47,14 @@ one structured record carrying every option's full gate chain
 formatter. `/health` asserts OSRM reachability and that the startup graph
 actually loaded gates/edges (not data freshness, which is an external
 process's job per spec); see `docs/ops.md` for the one-command rebuild.
+
+**Free-text geocoding (Phase 6b):** `/route` accepts an optional
+`origin_address`/`destination_address` per endpoint as an alternative to
+`{origin,destination}_{lat,lon}` - resolved via `tollroute.geocode` (the
+BAN API) to lat/lon *before* anything else runs, so the routing core itself
+never sees or needs to change. `match_tier`/`match_agreement` were already
+present on every gate in every response before this phase (Phase 4b); this
+just confirms that stays true regardless of which input form was used.
 """
 
 from __future__ import annotations
@@ -62,6 +70,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 
 from tollroute import cost
+from tollroute import geocode as geocode_mod
 from tollroute import graph as graph_mod
 from tollroute import logging as logging_mod
 from tollroute import osrm_client as osrm_client_mod
@@ -91,6 +100,7 @@ async def lifespan(app: FastAPI):
     finally:
         conn.close()
     app.state.osrm_client = httpx.Client(base_url=DEFAULT_OSRM_BASE_URL, timeout=30.0)
+    app.state.geocode_client = httpx.Client(base_url=geocode_mod.DEFAULT_GEOCODE_BASE_URL, timeout=30.0)
     app.state.geometry_cache: dict[str, tuple[float, list[tuple[float, float]]]] = {}
 
     @lru_cache(maxsize=ROUTE_CACHE_MAXSIZE)
@@ -125,6 +135,7 @@ async def lifespan(app: FastAPI):
     app.state.cached_shape = cached_shape
     yield
     app.state.osrm_client.close()
+    app.state.geocode_client.close()
     app.state.cached_shape.cache_clear()
 
 
@@ -168,20 +179,46 @@ def _prune_geometry_cache(cache: dict[str, tuple[float, list[tuple[float, float]
         del cache[rid]
 
 
+def _resolve_point(
+    lat: float | None, lon: float | None, address: str | None, label: str
+) -> tuple[float, float]:
+    """Resolve one `/route` endpoint from either `{label}_lat`/`{label}_lon`
+    or a free-text `{label}_address` (Phase 6b) - exactly one of the two
+    forms must be given; the routing core downstream never learns which was
+    used, since it only ever sees the resulting (lat, lon)."""
+    has_coords = lat is not None and lon is not None
+    if (lat is None) != (lon is None):
+        raise ValueError(f"{label}: provide both {label}_lat and {label}_lon, or neither")
+    if has_coords and address:
+        raise ValueError(f"{label}: provide either {label}_lat/{label}_lon or {label}_address, not both")
+    if address:
+        return geocode_mod.geocode(app.state.geocode_client, address)
+    if has_coords:
+        return (lat, lon)
+    raise ValueError(f"{label}: provide {label}_lat/{label}_lon or {label}_address")
+
+
 @app.get("/route")
 def get_route(
-    origin_lat: float,
-    origin_lon: float,
-    destination_lat: float,
-    destination_lon: float,
+    origin_lat: float | None = None,
+    origin_lon: float | None = None,
+    destination_lat: float | None = None,
+    destination_lon: float | None = None,
+    origin_address: str | None = None,
+    destination_address: str | None = None,
     vehicle_class: int = 1,
     vot_eur_per_hour: float | None = None,
 ):
     if vehicle_class not in app.state.class_config:
         raise HTTPException(status_code=400, detail="vehicle_class must be 1-5")
 
-    origin = (origin_lat, origin_lon)
-    destination = (destination_lat, destination_lon)
+    try:
+        origin = _resolve_point(origin_lat, origin_lon, origin_address, "origin")
+        destination = _resolve_point(destination_lat, destination_lon, destination_address, "destination")
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except geocode_mod.GeocodeError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
     # VoT bucket: round to the nearest whole EUR/h so near-identical
     # per-request overrides still hit the cache (judgement call - see
@@ -214,8 +251,8 @@ def get_route(
     logging_mod.log_route_response(origin, destination, vehicle_class, {**result, "options": options})
 
     return {
-        "origin": {"lat": origin_lat, "lon": origin_lon},
-        "destination": {"lat": destination_lat, "lon": destination_lon},
+        "origin": {"lat": origin[0], "lon": origin[1]},
+        "destination": {"lat": destination[0], "lon": destination[1]},
         **{k: v for k, v in result.items() if k != "options"},
         "options": options,
     }
