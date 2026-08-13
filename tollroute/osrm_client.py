@@ -237,10 +237,10 @@ def route_geometry(
             is_toll = _step_is_toll(step)
             if is_toll and is_access_leg and ref and ref not in unpriced_toll_roads:
                 unpriced_toll_roads.append(ref)
-            if segments and segments[-1]["is_toll"] == is_toll:
+            if segments and segments[-1]["is_toll"] == is_toll and segments[-1]["is_access"] == is_access_leg:
                 segments[-1]["coords"].extend(step_coords[1:])
             else:
-                segments.append({"is_toll": is_toll, "coords": list(step_coords)})
+                segments.append({"is_toll": is_toll, "is_access": is_access_leg, "coords": list(step_coords)})
 
     return {
         "geometry": geometry,

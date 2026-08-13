@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Toll Route Viewer</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%234285f4'>🛣️</text></svg>">
+  <script defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4xefocBYdmEsfUQyd4hHc1WysbvxgzVc"></script>
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body { font-family: sans-serif; background: #f5f5f5; display: flex; flex-direction: column; }
+    #map { flex: 1; border: 1px solid #ccc; position: relative; z-index: 1; min-height: 200px; }
+    .controls { background: white; padding: 6px 8px; border-bottom: 1px solid #ccc; box-shadow: 0 1px 2px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .controls h2 { margin: 0; font-size: 12px; white-space: nowrap; }
+    .controls > * { margin: 0; display: flex; align-items: center; gap: 3px; }
+    label { font-size: 11px; white-space: nowrap; }
+    input { padding: 3px 4px; background: white; border: 1px solid #ccc; border-radius: 2px; font-size: 11px; box-sizing: border-box; cursor: text; width: 100px; }
+    input:focus { outline: none; border-color: #4285f4; box-shadow: 0 0 2px #4285f4; }
+    select { padding: 3px 4px; background: white; border: 1px solid #ccc; border-radius: 2px; font-size: 11px; }
+    button { padding: 3px 8px; background: #4285f4; color: white; border: none; border-radius: 2px; cursor: pointer; font-size: 11px; }
+    button:hover { background: #357ae8; }
+    .options { background: white; padding: 6px 8px; border-top: 1px solid #ccc; overflow-y: auto; max-height: 150px; }
+    .option { padding: 4px 6px; margin: 2px 0; border-left: 3px solid #ccc; cursor: pointer; border-radius: 1px; font-size: 11px; }
+    .option:hover { background: #f0f0f0; }
+    .option.toll-0 { border-color: #34a853; }
+    .option.toll-1 { border-color: #ff9800; }
+    .option.toll-2 { border-color: #f44336; }
+    .option.toll-3 { border-color: #9c27b0; }
+    .option-title { font-weight: bold; margin-bottom: 2px; font-size: 11px; }
+    .option-details { font-size: 10px; color: #666; }
+    .error { color: #f44336; padding: 3px 4px; background: #ffebee; border-radius: 2px; font-size: 10px; }
+    .success { color: #34a853; padding: 3px 4px; background: #e8f5e9; border-radius: 2px; font-size: 10px; }
+    #status { font-size: 10px; white-space: nowrap; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <h2>Toll Route</h2>
+    <div><label for="origin">From:</label><input type="text" id="origin"></div>
+    <div><label for="destination">To:</label><input type="text" id="destination"></div>
+    <div><label for="class">Class:</label><select id="class"><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+    <button onclick="fetchRoutes()">Go</button>
+    <div id="status"></div>
+  </div>
+
+  <div id="map"></div>
+
+  <div class="options" id="options"></div>
+
+  <script>
+    const API_BASE = 'http://localhost:8000';
+    const COLORS = ['#34a853', '#ff9800', '#f44336', '#9c27b0', '#2196f3'];
+    let currentPolylines = [];
+    let routeOptions = [];
+    let map;
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 7,
+        center: { lat: 46.5, lng: 2 }
+      });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initMap);
+    } else {
+      initMap();
+    }
+
+    function showStatus(msg, isError = false) {
+      const div = document.getElementById('status');
+      div.innerHTML = isError ? `<div class="error">${msg}</div>` : `<div class="success">${msg}</div>`;
+    }
+
+    async function fetchRoutes() {
+      try {
+        showStatus('Fetching...');
+        clearMap();
+
+        const origin = document.getElementById('origin').value.trim();
+        const destination = document.getElementById('destination').value.trim();
+        const vehicleClass = document.getElementById('class').value;
+
+        if (!origin || !destination) {
+          showStatus('Enter origin and destination', true);
+          return;
+        }
+
+        const url = `${API_BASE}/route?origin_address=${encodeURIComponent(origin)}&destination_address=${encodeURIComponent(destination)}&vehicle_class=${vehicleClass}`;
+        console.log('Fetching:', url);
+        console.log('Origin:', window.location.origin);
+
+        const response = await fetch(url);
+        console.log('Response status:', response.status);
+        console.log('CORS header:', response.headers.get('Access-Control-Allow-Origin'));
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ detail: `HTTP ${response.status}` }));
+          throw new Error(error.detail || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        routeOptions = data.options || [];
+
+        if (routeOptions.length === 0) {
+          showStatus('No routes found', true);
+          return;
+        }
+
+        showStatus(`${routeOptions.length} routes`);
+        displayOptions();
+      } catch (err) {
+        console.error('Fetch error:', err);
+        showStatus(`Error: ${err.message}`, true);
+      }
+    }
+
+    function displayOptions() {
+      const container = document.getElementById('options');
+      container.innerHTML = '';
+
+      routeOptions.forEach((option, idx) => {
+        const div = document.createElement('div');
+        div.className = `option toll-${Math.min(idx, 3)}`;
+
+        const LABEL_NAMES = {fastest: 'Fastest', toll_optimised: 'Toll-Optimised', cheapest: 'Cheapest'};
+        const primaryLabel = (option.labels || []).find(l => LABEL_NAMES[l]) || option.labels?.[0];
+        let title = LABEL_NAMES[primaryLabel] || primaryLabel || `Option ${idx + 1}`;
+        let duration_min = (option.duration_s / 60).toFixed(0);
+        let distance_km = (option.distance_m / 1000).toFixed(0);
+        let tollText = option.toll_eur > 0.01 ? `💶 EUR ${option.toll_eur.toFixed(2)}` : 'Free';
+        let details = `${tollText} | ${duration_min}m | ${distance_km}km`;
+
+        if (option.extra_minutes && option.extra_minutes > 0.1) {
+          details += ` | +${option.extra_minutes.toFixed(0)}m`;
+        }
+
+        let roadsList = '';
+        if (option.toll_gates_detail && option.toll_gates_detail.length > 0) {
+          let allRoads = [];
+          option.toll_gates_detail.forEach(g => {
+            if (g.routes) {
+              g.routes.split('|').map(r => r.trim()).filter(r => r).forEach(r => {
+                if (!allRoads.includes(r)) allRoads.push(r);
+              });
+            }
+          });
+          if (allRoads.length > 0) {
+            roadsList = `<div style="font-size: 9px; color: #555; margin-top: 2px;">Via: ${allRoads.join(' → ')}</div>`;
+          }
+        }
+
+        let tollBreakdown = '';
+        if (option.toll_gates_detail && option.toll_gates_detail.length > 0) {
+          let lines = option.toll_gates_detail.map(g => {
+            let roads = g.routes ? g.routes.split('|').filter((v,i,a)=>a.indexOf(v)===i).join('/') : '';
+            return `${g.from_name} → ${g.to_name}${roads ? ' [' + roads + ']' : ''}: €${g.toll_eur.toFixed(2)}`;
+          });
+          tollBreakdown = `<div style="font-size: 9px; color: #c62828; margin-top: 2px;">${lines.join('<br>')}</div>`;
+        }
+
+
+        div.innerHTML = `
+          <div class="option-title">${title}</div>
+          <div class="option-details">${details}${roadsList}${tollBreakdown}</div>
+        `;
+
+        div.onclick = () => showRoute(option.route_id, idx, option);
+        container.appendChild(div);
+      });
+    }
+
+    async function showRoute(routeId, colorIdx, option) {
+      try {
+        clearMap();
+        showStatus(`Loading geometry...`);
+
+        const response = await fetch(`${API_BASE}/geometry/${routeId}`);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const data = await response.json();
+        const geometry = data.geometry || data;
+        const coords = geometry.coordinates || geometry;
+        const roads = data.roads || [];
+        const segments = data.segments || [];
+
+        if (!coords || coords.length === 0) throw new Error('No coordinates in response');
+
+        const routeColor = COLORS[colorIdx % COLORS.length];
+        const TOLL_COLOR = '#003399';
+        const path = coords.map(([lon, lat]) => ({ lat, lng: lon }));
+
+        if (segments.length > 0) {
+          segments.forEach(seg => {
+            if (!seg.coords || seg.coords.length === 0) return;
+            const segPath = seg.coords.map(([lon, lat]) => ({ lat, lng: lon }));
+            // Access legs: shown dashed/faded — driver should use local roads,
+            // not follow the motorway geometry shown here.
+            const isAccess = seg.is_access;
+            currentPolylines.push(new google.maps.Polyline({
+              path: segPath,
+              map,
+              strokeColor: isAccess ? '#888888' : (seg.is_toll ? TOLL_COLOR : routeColor),
+              strokeWeight: isAccess ? 2 : (seg.is_toll ? 5 : 3),
+              strokeOpacity: isAccess ? 0.4 : (seg.is_toll ? 1.0 : 0.7),
+            }));
+          });
+        } else {
+          currentPolylines.push(new google.maps.Polyline({
+            path, map, strokeColor: routeColor, strokeWeight: 3, strokeOpacity: 0.8,
+          }));
+        }
+
+        new google.maps.Marker({
+          position: path[0],
+          map: map,
+          title: 'Start',
+          icon: 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+        });
+
+        new google.maps.Marker({
+          position: path[path.length - 1],
+          map: map,
+          title: 'End',
+          icon: 'http://maps.google.com/mapfiles/ms/icons/red-dot.png'
+        });
+
+        const bounds = new google.maps.LatLngBounds();
+        path.forEach(p => bounds.extend(p));
+        map.fitBounds(bounds);
+
+        let dur_min = (option.duration_s / 60).toFixed(0);
+        let allRoadsStr = roads.filter(r => r).join(' → ');
+        const accessTollRoads = data.access_leg_toll_roads || [];
+        let msg = `€${option.toll_eur.toFixed(2)} | ${dur_min}m | ${allRoadsStr}`;
+        if (accessTollRoads.length > 0) {
+          msg += ` — ⚠️ price excludes access-leg tolls (${accessTollRoads.join(', ')}): take local roads to the first gate`;
+        }
+        showStatus(msg, accessTollRoads.length > 0);
+      } catch (err) {
+        showStatus(`Error: ${err.message}`, true);
+      }
+    }
+
+    function clearMap() {
+      currentPolylines.forEach(p => p.setMap(null));
+      currentPolylines = [];
+      map.overlayMapTypes.clear();
+    }
+  </script>
+</body>
+</html>
