@@ -1,0 +1,988 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Gate Validation Report</title>
+<style>
+body { font-family: system-ui, sans-serif; margin: 2em; }
+table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+th, td { border: 1px solid #ccc; padding: 4px 8px; text-align: left; }
+th { background: #e5e7eb; }
+.summary { display: flex; gap: 2em; margin-bottom: 1.5em; }
+.stat { background: #f3f4f6; padding: 1em 2em; border-radius: 6px; }
+</style>
+</head>
+<body>
+<h1>Gate Validation Report</h1>
+<div class="summary">
+  <div class="stat"><strong>956</strong><br>Total gates</div>
+  <div class="stat" style="background:#fca5a5"><strong>9</strong><br>Likely invalid</div>
+  <div class="stat" style="background:#fde68a"><strong>25</strong><br>Uncertain</div>
+  <div class="stat" style="background:#bbf7d0"><strong>922</strong><br>Likely valid</div>
+</div>
+<table>
+<thead>
+<tr><th>ID</th><th>Name</th><th>Operators</th><th>Tier</th><th>Score</th><th>Verdict</th><th>Flags</th></tr>
+</thead>
+<tbody>
+<tr style="background:#fca5a5"><td>844</td><td>Système Ouvert</td><td>APRR | AREA</td><td>O</td><td>6</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">VIRTUAL<br>OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fca5a5"><td>145</td><td>Bordeaux limite de concession</td><td>ASFC</td><td>F</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">ADMIN_BOUNDARY<br>LOW_CONFIDENCE</td></tr>
+<tr style="background:#fca5a5"><td>319</td><td>Frontière Espagnole</td><td>ASFC</td><td>F</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">ADMIN_BOUNDARY<br>LOW_CONFIDENCE</td></tr>
+<tr style="background:#fca5a5"><td>435</td><td>Le Boulou (péage en système fermé)</td><td>ASFC</td><td>A</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">VIRTUAL<br>PEAGE_EN<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fca5a5"><td>436</td><td>Le Boulou (péage en système ouvert)</td><td>ASFC</td><td>A</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">VIRTUAL<br>PEAGE_EN<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fca5a5"><td>437</td><td>Le Boulou (système fermé)</td><td>ASFC</td><td>A</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">VIRTUAL<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fca5a5"><td>847</td><td>Tarare est (péage en système fermé)</td><td>ASFC</td><td>A</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">VIRTUAL<br>PEAGE_EN<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fca5a5"><td>848</td><td>Tarare est (péage en système ouvert)</td><td>ASFC</td><td>A</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">VIRTUAL<br>PEAGE_EN<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fca5a5"><td>870</td><td>Tour de Salvagny limite de concession</td><td>ASFC</td><td>O</td><td>4</td><td>LIKELY_INVALID</td><td style="font-size:0.8em">ADMIN_BOUNDARY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>1</td><td>A 20 limite de concession</td><td>ASFC</td><td></td><td>3</td><td>UNCERTAIN</td><td style="font-size:0.8em">ADMIN_BOUNDARY</td></tr>
+<tr style="background:#fde68a"><td>243</td><td>Clermont-Ferrand limite de concession</td><td>ASFC</td><td></td><td>3</td><td>UNCERTAIN</td><td style="font-size:0.8em">ADMIN_BOUNDARY</td></tr>
+<tr style="background:#fde68a"><td>106</td><td>Belin Beliet</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>108</td><td>Bellegard</td><td>ATMB</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>141</td><td>Bonneville Est</td><td>ATMB</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>180</td><td>Cap de Pin</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>195</td><td>Castets</td><td>Landes</td><td>C</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>CONFLICTED<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fde68a"><td>244</td><td>Cluses</td><td>ATMB</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>245</td><td>Cluses centre</td><td>ATMB</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>262</td><td>CRUSEILLES A 410</td><td>AREA</td><td>D</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>LOW_CONFIDENCE</td></tr>
+<tr style="background:#fde68a"><td>324</td><td>Gaillard</td><td>ATMB</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>417</td><td>Labouheyre</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>420</td><td>Laharie</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>442</td><td>Le Fayet</td><td>ATMB</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>454</td><td>Le Muret</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fde68a"><td>455</td><td>Le Muret</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>MANUAL_OVERRIDE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#fde68a"><td>468</td><td>Lesperon</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>481</td><td>Liposthey</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>496</td><td>Magesq</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>666</td><td>QUINCIEUX BARRIERE</td><td>APRR</td><td>B</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">BARRIERE<br>OD_SOURCE_ONLY<br>CONFLICTED</td></tr>
+<tr style="background:#fde68a"><td>742</td><td>Salles</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>783</td><td>Soustons</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>784</td><td>Soustons</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>795</td><td>St Geors de Maremne</td><td>Landes</td><td>O</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SINK_ONLY<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#fde68a"><td>917</td><td>VICHY</td><td>APRR</td><td>B</td><td>2</td><td>UNCERTAIN</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>CONFLICTED</td></tr>
+<tr style="background:#bbf7d0"><td>16</td><td>Aix (A51)</td><td>escota</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>17</td><td>Aix (A57,A50,A52,A8)</td><td>escota</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>22</td><td>Alençon</td><td>ALIS</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>34</td><td>AMBOISE CH.RENAULT</td><td>APRR | aliea</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>36</td><td>AMIENS EST (péage de Jules Verne)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>39</td><td>AMIENS SUD (péage de Dury)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>45</td><td>ANGERS</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>47</td><td>ANGERS (CORZE)</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>52</td><td>ARGENTAN OUEST</td><td>Alicorne</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>53</td><td>ARGENTAN SUD</td><td>Alicorne</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>54</td><td>Ariège</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>61</td><td>Aubagne</td><td>escota</td><td>C</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED</td></tr>
+<tr style="background:#bbf7d0"><td>81</td><td>Barriere de peage du Roumois A13</td><td>ALIS</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE<br>LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>83</td><td>Bayonne Mousserolles</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>87</td><td>Bd d’Estienne d’Orves</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>90</td><td>BEAULIEU</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>91</td><td>Péage de Beaulieu-s.-Layon</td><td>ASFC</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>101</td><td>Beausoleil/Monaco Est</td><td>escota</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>107</td><td>Belin Beliet</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>109</td><td>Bellegarde</td><td>APRR | ASFC | ATMB | Cofiroute | aliea</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SINK_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>112</td><td>Péage de Bénesse-Marenne</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>128</td><td>Biarritz (demi-échangeur nord)</td><td>ASFC</td><td>C</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED</td></tr>
+<tr style="background:#bbf7d0"><td>131</td><td>Bifurcation A46S/A43 vers A43 ou A46</td><td>ASFC</td><td>F</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>132</td><td>Bifurcation A46S/A7/A47 vers Lyon ou St-Étienne</td><td>ASFC</td><td>F</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>136</td><td>Blaye</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>142</td><td>Bonneville Ouest</td><td>ATMB</td><td>C</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>143</td><td>BONNIÈRES-SUR-SEINE</td><td>sapn</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>144</td><td>Bordeaux/Arcachon</td><td>Landes</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>148</td><td>BOULOGNE EST (péage d'Herquelingue)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>161</td><td>Bretelle de Verfeil</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BRETELLE<br>MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>172</td><td>CAEN</td><td>sapn</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>177</td><td>CALAIS (péage de Setques)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>181</td><td>Cap de Pin</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>194</td><td>Castets</td><td>Landes</td><td>C</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SINK_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>202</td><td>CHALONS - LA VEUVE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>203</td><td>CHALONS MOURMELON</td><td>APRR | ASFC | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>230</td><td>CHENARD</td><td>sapn</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>231</td><td>CHESNES</td><td>AREA</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>233</td><td>CHIGNIN BRETELLE</td><td>AREA</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BRETELLE<br>OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>258</td><td>CRIMOLOIS</td><td>Cofiroute</td><td>E</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>261</td><td>CROTTET</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>271</td><td>DORDIVES</td><td>APRR</td><td>C</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>275</td><td>DRUYE (CANDE)</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>285</td><td>ELOISE</td><td>APRR | ASFC | ATMB | aliea</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SINK_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>296</td><td>FALAISE OUEST</td><td>Alicorne</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>297</td><td>FALAISE SUD</td><td>Alicorne</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>304</td><td>FONTAINE-LARIVIERE</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>308</td><td>FONTENAY /LOING</td><td>APRR | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>314</td><td>Francazal</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>318</td><td>FREYMING-MERLEBACH</td><td>sanef</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>329</td><td>Gatignolle</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>332</td><td>GENAY</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>338</td><td>GONDREVILLE A77/N</td><td>APRR | aliea</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>339</td><td>GONDREVILLE A77/S</td><td>APRR | aliea</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>340</td><td>GONDREVILLE LA FRANCHE NORD</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>341</td><td>GONDREVILLE LA FRANCHE SUD</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>353</td><td>Hanipet</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>355</td><td>Haute-Perche</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>369</td><td>L'ISLE-ADAM (péage d'Amblainville)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>378</td><td>LA BOISSE - MONTLUEL</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SINK_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>379</td><td>La Bouvinerie</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>393</td><td>LA FOLIE-B/PARIS</td><td>APRR | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>394</td><td>La Foucaudière</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>402</td><td>LA RIVIÈRE-SAINT-SAUVEUR</td><td>sapn</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>418</td><td>Labouheyre</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>419</td><td>Laghet</td><td>escota</td><td>C</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SINK_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>421</td><td>Laharie</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>440</td><td>Le Chapitre</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>441</td><td>LE CROZET</td><td>AREA</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>445</td><td>Le Mans nord</td><td>ASFC</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED</td></tr>
+<tr style="background:#bbf7d0"><td>451</td><td>Le Montet</td><td>aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>457</td><td>Le Palays</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>458</td><td>LE TOURNEAU</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>469</td><td>Lesperon</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>477</td><td>Libourne/St-Antoine</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>479</td><td>LILLE / DOURGES (péage de Fresnes)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>482</td><td>Liposthey</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>489</td><td>LUSSE</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>497</td><td>Magesq</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>518</td><td>METZ</td><td>sanef</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>521</td><td>MIONNAY</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>524</td><td>Modane (vers l’Italie)</td><td>SFTRF</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>527</td><td>Molinet</td><td>aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>531</td><td>Monaco</td><td>escota</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>541</td><td>Montbeugny</td><td>aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>556</td><td>Péage de Montpellier St-Jean</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>564</td><td>MONTS-SORIGNY</td><td>Cofiroute</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>565</td><td>MORTRÉE</td><td>Alicorne</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>577</td><td>MYENNES</td><td>APRR</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>580</td><td>NANTES</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>587</td><td>NEUFCHÂTEL-EN-BRAY</td><td>sanef</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>610</td><td>ORANGE</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>626</td><td>PARIS (LA FOLIE BESSIN)</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>628</td><td>PARIS / NOISY-LE-GRAND (péage de Coutevroult)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>629</td><td>PARIS / ROISSY (péage de Chamant)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>634</td><td>Périgueux ouest</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>645</td><td>PLATEAU</td><td>sapn</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>656</td><td>PONT L'EVÊQUE, DEAUVILLE</td><td>sapn</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>659</td><td>Péage de Pouilly-en-Auxois</td><td>APRR | ASFC | aliea</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>660</td><td>POUILLY-EN-AUXOIS</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>665</td><td>Pyrénées-Orientales</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>667</td><td>RD 323</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>668</td><td>RD 347</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>669</td><td>REIMS (péage de Courcy)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>680</td><td>REIMS - TAISSY</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>696</td><td>Roques</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>712</td><td>SAINT EXUPERY</td><td>AREA</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>743</td><td>Salles</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>754</td><td>SAVIGNY /CLAIRIS</td><td>APRR | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>756</td><td>Scientrier</td><td>ATMB</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>757</td><td>Scionzier</td><td>ATMB</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY</td></tr>
+<tr style="background:#bbf7d0"><td>767</td><td>Sesquières</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>779</td><td>Sorges</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>794</td><td>St Geors de Maremne</td><td>Landes</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>799</td><td>ST GERMAIN LES VERGNE</td><td>APRR | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>803</td><td>ST HILAIRE</td><td>APRR | aliea</td><td>E</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>815</td><td>ST MARTIN BELLEVUE A41 N</td><td>AREA</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>824</td><td>ST MICHEL MAURIENNE ECH</td><td>AREA</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>841</td><td>STRASBOURG(péage de Schwindratzheim)</td><td>sanef</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>846</td><td>TANCARVILLE</td><td>sapn</td><td>E</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>869</td><td>Péage de Toulouse sud/ouest</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>873</td><td>TOURS-C/MONNAIE</td><td>APRR | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>874</td><td>Peage de Tours centre</td><td>ASFC</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>877</td><td>TOURS CENTRE</td><td>Cofiroute</td><td>A</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SINK_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>880</td><td>TOURS CENTRE (CANDE)</td><td>Cofiroute</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>881</td><td>TOURS CENTRE (MONNAIE)</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>882</td><td>TOURS CENTRE (SAINT CHRISTOPHE)</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>883</td><td>TOURS CENTRE (SORIGNY)</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>901</td><td>Péage de Val de Saône</td><td>APRR | ASFC | aliea</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>902</td><td>VAL DE SAONE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">CONFLICTED<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>931</td><td>VILLEFRANCHE S/ CHER</td><td>APRR | aliea</td><td>O</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">MANUAL_OVERRIDE</td></tr>
+<tr style="background:#bbf7d0"><td>943</td><td>VIRY</td><td>APRR | ATMB | Cofiroute | aliea</td><td>B</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">OD_SOURCE_ONLY<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>944</td><td>VITRE (LA GRAVELLE)</td><td>Cofiroute</td><td>D</td><td>1</td><td>LIKELY_VALID</td><td style="font-size:0.8em">LOW_CONFIDENCE</td></tr>
+<tr style="background:#bbf7d0"><td>2</td><td>ABBEVILLE EST</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>3</td><td>ABBEVILLE NORD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>4</td><td>Ablis</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>5</td><td>ABLIS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>6</td><td>Agde Pézenas</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>7</td><td>Agen</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>8</td><td>Agen Ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>9</td><td>Aigrefeuille</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>10</td><td>AIGUEBELETTE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>11</td><td>Aiguillon</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>12</td><td>Aire-sur-Adour nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>13</td><td>Aire-sur-Adour sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>14</td><td>AIRE-SUR-LA-LYS</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>15</td><td>AITON</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>18</td><td>AIX NORD</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>19</td><td>Aix ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>20</td><td>AIX SUD</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>21</td><td>ALBERT</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>23</td><td>Alençon nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>24</td><td>ALENCON NORD</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>25</td><td>Alençon sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>26</td><td>ALENCON SUD</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>27</td><td>ALLAINES</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>28</td><td>Allainville</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>29</td><td>ALLONZIER</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>30</td><td>Ambarès/St-Loubes</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>31</td><td>Ambérieu</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>32</td><td>AMBERIEU EN BUGEY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>33</td><td>Ambes</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>35</td><td>Amboise/Château-Renault</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>37</td><td>AMIENS NORD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>38</td><td>AMIENS OUEST</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>40</td><td>ANCENIS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>41</td><td>Andrézieux-Bouthéon nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>42</td><td>Andrézieux-Bouthéon sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>43</td><td>ANGERS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>44</td><td>ANGERS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>46</td><td>ANGERS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>48</td><td>ANNECY CENTRE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>49</td><td>ANNECY NORD</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>50</td><td>Antibes</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>51</td><td>ARGENTAN</td><td>Cofiroute</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>55</td><td>ARLAY</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>56</td><td>ARRAS EST</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>57</td><td>ARRAS NORD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>58</td><td>Artenay</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>59</td><td>Artix</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>60</td><td>ATHIES</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>62</td><td>Auberives (accès nord/sud uniquement)</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>63</td><td>Aubignosc</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>64</td><td>AUMALE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>65</td><td>Auriol</td><td>escota</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>66</td><td>Auvours</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>67</td><td>AUVOURS (LE MANS ZI SUD)</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>68</td><td>Auxerre nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>69</td><td>Auxerre sud</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>70</td><td>AUXY</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>71</td><td>AUXY</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>72</td><td>Avallon</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>73</td><td>Avignon nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>74</td><td>Avignon sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>75</td><td>Péage de Baillargues</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>76</td><td>Balan</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>77</td><td>Balbigny</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>78</td><td>Bandol</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>79</td><td>BAPAUME</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>80</td><td>BARRIERE DE MONTREUIL AUX LIONS</td><td>Cofiroute</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>82</td><td>BAUME-LES-DAMES</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>84</td><td>Bayonne nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>85</td><td>Bayonne sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>86</td><td>Bazas</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>88</td><td>Beaufort-en-Vallée</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>89</td><td>BEAUFORT EN VALLEE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>92</td><td>Péage de Beaumont</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>93</td><td>BEAUMONT</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>94</td><td>BEAUMONT SUR SARTHE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>95</td><td>Beaune nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>96</td><td>BEAUNE SUD</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>97</td><td>BEAUPONT</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>98</td><td>BEAUPREAU-SAINT GERMAIN</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>99</td><td>Beaurepaire</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>100</td><td>Beausoleil</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>102</td><td>BEAUTOT</td><td>sapn</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>103</td><td>BEAUVAIS CENTRE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>104</td><td>BEAUVAIS NORD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>105</td><td>Belcodène</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>110</td><td>BELLEVILLE S/SAONE</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>111</td><td>BELLEVILLE SUR SAONE</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>113</td><td>BERCK</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>114</td><td>Bernay</td><td>ALIS</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>115</td><td>Bernay</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>116</td><td>BERNAY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>117</td><td>Péage de Bersaillin</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>118</td><td>BERSAILLIN</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>119</td><td>Besançon est</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>120</td><td>Besançon nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>121</td><td>BESANCON OUEST</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>122</td><td>BÉTHUNE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>123</td><td>BEUZEVILLE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>124</td><td>Péage de Beynost</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>125</td><td>BEYNOST</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>126</td><td>Péage de Béziers-Cabrials</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>127</td><td>Béziers ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>129</td><td>Biarritz (demi-échangeur sud)</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>130</td><td>Bierre-les-Semur</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>133</td><td>Péage du Bignon</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>134</td><td>Biriatou</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>135</td><td>Péage de Biriatou</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>137</td><td>BLERE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>138</td><td>Blois</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>139</td><td>BOLBEC</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>140</td><td>Bollène</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>146</td><td>Borderouge</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>147</td><td>BOULAY</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>149</td><td>BOULOGNE SUD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>150</td><td>BOURG-ACHARD</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>151</td><td>Bourg nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>152</td><td>Bourg sud</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>153</td><td>Bourges</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>154</td><td>BOURGES (LIM.CONC.)</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>155</td><td>BOURGOIN</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>156</td><td>Bourgueil</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>157</td><td>BOURGUEIL</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>158</td><td>BOURNEVILLE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>159</td><td>Boussens</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>160</td><td>Bram</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>162</td><td>Brignoles</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>163</td><td>Brionne</td><td>ALIS</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>164</td><td>Brionne</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>165</td><td>BRIONNE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>166</td><td>Briscous</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>167</td><td>Brive ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>168</td><td>Broglie ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>169</td><td>BROU</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>170</td><td>BULGNEVILLE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>171</td><td>Péage de Cabariot</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>173</td><td>Cagnes-est</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>174</td><td>CAGNY</td><td>sapn</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>175</td><td>Cahors nord</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>176</td><td>Cahors sud</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>178</td><td>CAMBRAI</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>179</td><td>Cannet-de-Meyreuil</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>182</td><td>Capbreton (demi-échangeur nord)</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>183</td><td>Capbreton (demi-échangeur sud)</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>184</td><td>Captieux</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>185</td><td>Capvern</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>186</td><td>Carbon-Blanc</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>187</td><td>Carcassonne est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>188</td><td>Carcassonne ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>189</td><td>Carnoules</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>190</td><td>Carros</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>191</td><td>Cassis</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>192</td><td>Castelnaudary</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>193</td><td>Castelsarrasin</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>196</td><td>Caussade</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>197</td><td>Cavaillon</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>198</td><td>Chalon centre</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>199</td><td>CHALON NORD</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>200</td><td>Chalon sud</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>201</td><td>CHÂLONS-EN-CHAMPAGNE / LA VEUVE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>204</td><td>CHAMBERY NORD</td><td>AREA</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>205</td><td>PEAGE DE CHAMBOURCY</td><td>sapn</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>206</td><td>CHAMBRAY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>207</td><td>Chanas</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>208</td><td>Chantonnay</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>209</td><td>CHARMONT</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>210</td><td>CHARMONT (LIM.CONC)</td><td>APRR | aliea</td><td></td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>211</td><td>Charmont-sous-Barbuise</td><td>ASFC | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>212</td><td>Chartres est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>213</td><td>CHARTRES EST</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>214</td><td>CHARTRES-THIVARS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>215</td><td>Chasse sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>216</td><td>CHATEAU DU LOIR (MONTABON)</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>217</td><td>CHATEAU-RENAULT</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>218</td><td>CHÂTEAU-THIERRY</td><td>APRR | ASFC | Cofiroute | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>219</td><td>CHATELLERAULT NORD</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>220</td><td>CHATELLERAULT SUD</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>221</td><td>CHATENOIS</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>222</td><td>Chatenois sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>223</td><td>CHATILLON-LABORDE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>224</td><td>CHATUZANGE BARRIERE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>225</td><td>CHAUFOUR</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>226</td><td>Chaumes</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>227</td><td>CHAUMONT-SEMOUTIERS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>228</td><td>Chémery</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>229</td><td>Chemillé</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>232</td><td>Chignin Barrière</td><td>AREA | SFTRF</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>234</td><td>Chignin Les Marches</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>235</td><td>Choisey</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>236</td><td>Cholet nord</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>237</td><td>CHOLET SUD</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>238</td><td>Péage de Clermont</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>239</td><td>CLERMONT</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>240</td><td>CLERMONT-BARRIERE</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>241</td><td>Clermont-en-Argonne</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>242</td><td>CLERMONT-EN-ARGONNE</td><td>APRR | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>246</td><td>Colombey-les-Belles</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>247</td><td>Combronde</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>248</td><td>Communay</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>249</td><td>COMPIÈGNE OUEST</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>250</td><td>Condrieu</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>251</td><td>Connerré</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>252</td><td>CONNERRE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>253</td><td>Péage de Corzé</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>254</td><td>Coudoux</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>255</td><td>Courtenay</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>256</td><td>COUTEVROULT</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>257</td><td>Coutras</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>259</td><td>Crolles Barrière</td><td>AREA | SFTRF</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>260</td><td>Crolles Brignoud</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>263</td><td>Péage de Deux Chaises</td><td>APRR | ASFC | aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>264</td><td>DEUX-CHAISES</td><td>APRR | Cofiroute | aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>265</td><td>DIJON-ARC S/TILLE</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>266</td><td>DIJON-ARC SUR TILLE</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>267</td><td>Péage de Dijon/Crimolois</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>268</td><td>Péage de Dijon sud</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>269</td><td>DIJON SUD</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>270</td><td>Dôle</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>272</td><td>Dormans</td><td>APRR | ASFC | Cofiroute | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>273</td><td>DOURDAN</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>274</td><td>DOZULÉ</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>276</td><td>Durtal</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>277</td><td>DURTAL</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>278</td><td>Péage d’Argentan</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>279</td><td>Péage d’Arles</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>280</td><td>Péage d’Arveyres</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>281</td><td>Écommoy</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>282</td><td>ECOMMOY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>283</td><td>Egletons</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>284</td><td>EGLETONS</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>286</td><td>ELOISE / ANNECY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>287</td><td>EPERNAY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>288</td><td>Péage des Eprunes</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>289</td><td>Escrennes</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>290</td><td>ESCRENNES</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>291</td><td>ESSERTAUX</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>292</td><td>ESVRES</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>293</td><td>ETAPLES / LE TOUQUET</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>294</td><td>Eurocentre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>295</td><td>EVRON</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>298</td><td>FAREBERSVILLER</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>299</td><td>FECAMP</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>300</td><td>FEILLENS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>301</td><td>Feurs</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>302</td><td>Péage de Fleury-en-Bière</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>303</td><td>FLEURY-EN-BIERE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>305</td><td>FONTAINEBLEAU</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>306</td><td>Fontenay centre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>307</td><td>FONTENAY LE COMTE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>309</td><td>Fontenay ouest</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>310</td><td>FONTENAY SUR LOING</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>311</td><td>FORET DE TRONCAIS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>312</td><td>Forges</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>313</td><td>Fort de St-Priest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>315</td><td>Fréjus</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>316</td><td>Fresnes-en-Woevre</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>317</td><td>FRESNES EN WOEVRE</td><td>APRR | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>320</td><td>Futuroscope</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>321</td><td>Gacé</td><td>ALIS</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>322</td><td>Gacé</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>323</td><td>GACE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>325</td><td>Gallargues</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>326</td><td>Péage de Gannat</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>327</td><td>GANNAT</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>328</td><td>Garlin</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>330</td><td>Gémenos</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>331</td><td>Gemil</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>333</td><td>GENDREY</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>334</td><td>GERZAT</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>335</td><td>GERZAT-VILLE</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>336</td><td>GIDY</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>337</td><td>Péage de Gignac</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>342</td><td>Gondreville nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>343</td><td>Gondreville sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>344</td><td>Gragnague</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>345</td><td>Grand-Clos</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>346</td><td>Grans</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>347</td><td>Péage de Groissiat</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>348</td><td>GROISSIAT</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>349</td><td>Guiche</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>350</td><td>GUIGNICOURT</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>351</td><td>Péage de Gye</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>352</td><td>GYE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>354</td><td>HARDIVILLERS</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>356</td><td>HERMILLON</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>357</td><td>HEUDEBOUVILLE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>358</td><td>HOCHFELDEN</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>359</td><td>HORDAIN (péage d'Hordain)</td><td>sanef</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>360</td><td>ILLIERS COMBRAY</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>361</td><td>INCARVILLE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>362</td><td>ISLE D'ABEAU CENTRE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>363</td><td>JANVILLE (ALLAINES)</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>364</td><td>Jarny</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>365</td><td>JARNY</td><td>APRR | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>366</td><td>JOIGNY</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>367</td><td>Joué-en-Charnie</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>368</td><td>JOUE-LES-TOURS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>370</td><td>L ISLE-S/LE-DOUBS</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>371</td><td>L'ISLE-SUR-LE-DOUBS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>372</td><td>La Bachellerie</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>373</td><td>LA BAUME D'HOSTUN</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>374</td><td>La Bédoule</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>375</td><td>La Boise/Montuel</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>376</td><td>Péage de La Boisse</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>377</td><td>LA BOISSE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>380</td><td>La Brède</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>381</td><td>La Brillanne</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>382</td><td>La Cadière</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>383</td><td>La Ciotat</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>384</td><td>LA CÔTE PICARDE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>385</td><td>Péage de La Côtière</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>386</td><td>LA COTIERE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>387</td><td>La Cour-Neuve</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>388</td><td>La Croix-Chalon</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>389</td><td>La Croix Daurade</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>390</td><td>LA FÈRE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>391</td><td>La Ferté-Bernard</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>392</td><td>LA FERTE BERNARD</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>395</td><td>La Fouillouse</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>396</td><td>Péage de La Gravelle</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>397</td><td>LA HAIE-TONDUE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>398</td><td>La Molle</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>399</td><td>La Monnaie</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>400</td><td>Péage de la Négresse</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>401</td><td>La Réole</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>403</td><td>Péage de La Roche-sur-Yon</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>404</td><td>LA ROCHE SUR YON</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>405</td><td>La Roche-sur-Yon centre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>406</td><td>La Roche-sur-Yon est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>407</td><td>La Roche-sur-Yon ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>408</td><td>La Roche-sur-Yon sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>409</td><td>LA ROCHELLE / NIORT SUD</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>410</td><td>La Roseraie</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>411</td><td>La Saulce</td><td>escota</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>412</td><td>LA TOUR DU PIN</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>413</td><td>LA TOUR DU PIN EST</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>414</td><td>La Turbie</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>415</td><td>La Verrie</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>416</td><td>Labastide Murat</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>422</td><td>LAMOTTE-BEUVRON</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>423</td><td>Peage de Lancon (Aix/Berre)</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>424</td><td>Langon</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>425</td><td>LANGRES NORD</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>426</td><td>Langres sud</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>427</td><td>Lannemezan</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>428</td><td>LAON</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>429</td><td>Lasbordes</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>430</td><td>Laval est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>431</td><td>LAVAL EST</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>432</td><td>Laval ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>433</td><td>LAVAL OUEST</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>434</td><td>LE BIGNON</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>438</td><td>Le Caloy</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>439</td><td>Le Cannet-des-Maures</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>443</td><td>LE HAVRE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>444</td><td>LE MANS CENTRE UNIVERSITE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>446</td><td>Le Mans ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>447</td><td>Le Mans sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>448</td><td>LE MANS SUD</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>449</td><td>LE MANS ZI NORD</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>450</td><td>LE MIROIR</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>452</td><td>Le Montet Est</td><td>aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>453</td><td>Le Montet Ouest</td><td>aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>456</td><td>Le Muy</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>459</td><td>Le Touvet</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>460</td><td>Lentilly</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>461</td><td>LES ABRETS</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>462</td><td>Les Adrets</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>463</td><td>LES EPRUNES</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>464</td><td>LES ESSARTS</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>465</td><td>Les Herbiers</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>466</td><td>Les Izards</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>467</td><td>Lescar</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>470</td><td>Péage de Lestelle</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>471</td><td>Lestelle-de-Saint-Martory</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>472</td><td>Leucate</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>473</td><td>Lézignan</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>474</td><td>Lezoux</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>475</td><td>Libourne nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>476</td><td>Libourne ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>478</td><td>LIÉVIN</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>480</td><td>LILLERS</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>483</td><td>Longué</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>484</td><td>LONGUE-JUMELLES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>485</td><td>Loriol</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>486</td><td>Lormont</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>487</td><td>Luigny</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>488</td><td>Lunel</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>490</td><td>L’Arbresle</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>491</td><td>L’Isle-sur-le-Doubs</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>492</td><td>L’Union</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>493</td><td>Mâcon centre</td><td>APRR | ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>494</td><td>Mâcon nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>495</td><td>MACON SUD</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>498</td><td>Magnant</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>499</td><td>Mandelieu</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>500</td><td>Manosque</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>501</td><td>Mansac Terrasson</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>502</td><td>Manzat</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>503</td><td>MANZAT</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>504</td><td>Marennes</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>505</td><td>Maresché</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>506</td><td>Marmande</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>507</td><td>Marolles-sur-Seine</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>508</td><td>MARQUION</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>509</td><td>Martel</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>510</td><td>Péage des Martres-d’Artière</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>511</td><td>Martres-Tolosane</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>512</td><td>MASNIÈRES</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>513</td><td>Mazères-Saverdun</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>514</td><td>MEAUX / CRECY</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>515</td><td>Menton</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>516</td><td>MER</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>517</td><td>MÉRU</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>519</td><td>MEUNG</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>520</td><td>Meung-sur-Loire</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>522</td><td>Mions</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>523</td><td>MIRAMBEAU</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>525</td><td>MOIRANS</td><td>AREA</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>526</td><td>MOIRANS NORD</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>528</td><td>Molinet Est</td><td>aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>529</td><td>Molinet Ouest</td><td>aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>530</td><td>Monaco</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>532</td><td>Péage de Monnaie</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>533</td><td>MONT-CHOISY</td><td>APRR | ASFC | Cofiroute | aliea | sanef</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>534</td><td>Montabon</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>535</td><td>Montaigu</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>536</td><td>Montastruc</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>537</td><td>Montauban</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>538</td><td>Montauban nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>539</td><td>Péage de Montauban nord</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>540</td><td>Montaudran</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>542</td><td>Montbeugny Est</td><td>aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>543</td><td>Montbeugny Ouest</td><td>aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>544</td><td>Montbrison Montrond</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>545</td><td>Montélimar nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>546</td><td>Montélimar sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>547</td><td>PEAGE DE MONTESSON</td><td>sapn</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>548</td><td>Montgiscard</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>549</td><td>Montigny-le-Roi</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>550</td><td>Péage de Montluçon</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>551</td><td>MONTLUCON</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>552</td><td>MONTMARAULT</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>553</td><td>Montmélian</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>554</td><td>Montpellier est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>555</td><td>Montpellier ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>557</td><td>Montpellier sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>558</td><td>Montpon-Ménestérol</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>559</td><td>Montréjeau</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>560</td><td>MONTREUIL (REIMS)</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>561</td><td>Péage de Montreuil-aux-Lions</td><td>APRR | ASFC | aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>562</td><td>MONTREUIL AUX LIONS</td><td>APRR | Cofiroute | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>563</td><td>Montreuil-Reims</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>566</td><td>Mougins</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>567</td><td>Mouguerre Bourg</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>568</td><td>Mouguerre Elizaberry</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>569</td><td>Moulis</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>570</td><td>Mousserolles</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>571</td><td>Peage de Muret</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>572</td><td>Muret nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>573</td><td>Mûrs-Érigné</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>574</td><td>Péage de Mussidan</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>575</td><td>Mussidan est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>576</td><td>Mussidan sud</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>578</td><td>Nailloux</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>579</td><td>NANTES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>581</td><td>NANTES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>582</td><td>Narbonne est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>583</td><td>Narbonne sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>584</td><td>NÉCY</td><td>Alicorne</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>585</td><td>NEMOURS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>586</td><td>Nespouls</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>588</td><td>NEUFCHÂTEL-HARDELOT</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>589</td><td>NEUILLE-PONT-PIERRE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>590</td><td>Nice Aéroport</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>591</td><td>Nice-est</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>592</td><td>Nice-ouest</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>593</td><td>Nice quartier-nord</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>594</td><td>Nice St-Isidore</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>595</td><td>Nîmes centre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>596</td><td>Nîmes est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>597</td><td>Nîmes Garons</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>598</td><td>Nîmes ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>599</td><td>NIORT EST</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>600</td><td>NIORT NORD</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>601</td><td>NIORT OUEST</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>602</td><td>NITRY</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>603</td><td>Noirétable</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>604</td><td>NUITS-SAINT-GEORGES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>605</td><td>Nuits-St-Georges</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>606</td><td>NŒUX-LES-MINES</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>607</td><td>OLIVET</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>608</td><td>Ollioules</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>609</td><td>Ondres</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>611</td><td>Orange centre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>612</td><td>Orange nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>613</td><td>Orange sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>614</td><td>Orbec</td><td>ALIS</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>615</td><td>ORBEC</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>616</td><td>ORLEANS-CENTRE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>617</td><td>Orléans nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>618</td><td>ORMES</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>619</td><td>Orthez</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>620</td><td>Péage de Pamiers</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>621</td><td>Pamiers Nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>622</td><td>Pamiers Sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>623</td><td>Parages</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>624</td><td>PARIGNE-L'EVEQUE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>625</td><td>Parigné-l’Évêque</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>627</td><td>PARIS (LA FOLIE BESSIN)</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>630</td><td>Pas-de-Trets</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>631</td><td>Pau centre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>632</td><td>Pellouailles-les-Vignes</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>633</td><td>Périgueux est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>635</td><td>Périgueux sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>636</td><td>PÉRONNE / VALLEE DE LA SOMME</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>637</td><td>Pérouges</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>638</td><td>Perpignan nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>639</td><td>Perpignan sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>640</td><td>Péage du Perthus</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>641</td><td>Pertuis</td><td>escota</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>642</td><td>Peyrehorade</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>643</td><td>Peyruis</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>644</td><td>PHALSBOURG</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>646</td><td>Podensac</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>647</td><td>POISSY / ORGEVAL</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>648</td><td>Poitiers nord</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>649</td><td>POITIERS SUD</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>650</td><td>POIX-DE-PICARDIE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>651</td><td>PONS</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>652</td><td>PONT D AIN</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>653</td><td>Pont de Dorieux</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>654</td><td>Pont du Château</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>655</td><td>Pont-d’Ain</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>657</td><td>PONT-SAINTE-MAXENCE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>658</td><td>PONTCHARRA</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>661</td><td>Pourrières</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>662</td><td>Puget-sur-Argens</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>663</td><td>Puget-Ville</td><td>escota</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>664</td><td>PUTTELANGE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>670</td><td>Péage de Reims est</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>671</td><td>REIMS EST (péage de Taissy)</td><td>sanef</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>672</td><td>REIMS EST (TAISSY)</td><td>APRR | aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>673</td><td>Péage Reims nord</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>674</td><td>REIMS NORD (ORMES)</td><td>APRR | aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>675</td><td>REIMS NORD (péage d'Ormes)</td><td>sanef</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>676</td><td>Reims ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>677</td><td>REIMS OUEST (péage de Thillois)</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>678</td><td>REIMS OUEST (THILLOIS)</td><td>APRR | aliea</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>679</td><td>REIMS SUD</td><td>APRR | ASFC | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>681</td><td>REIMS - TINQUEUX</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>682</td><td>Remoulins</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>683</td><td>REPLONGES</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>684</td><td>RESSONS</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>685</td><td>Péage de Restigné</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>686</td><td>RESTIGNE</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>687</td><td>RIOM</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>688</td><td>RIVES</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>689</td><td>Robecourt</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>690</td><td>Rochefort nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>691</td><td>Rochefort ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>692</td><td>Rognac Berre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>693</td><td>ROMORANTIN</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>694</td><td>Roquefort</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>695</td><td>Roquemaure</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>697</td><td>ROUEN LES ESSARTS</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>698</td><td>Rouessé-Fontaine</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>699</td><td>Péage du Roumois</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>700</td><td>ROUMOIS</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>701</td><td>ROYE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>702</td><td>RUMILLY</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>703</td><td>Sablé La Flèche</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>704</td><td>SABLE-LA FLECHE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>705</td><td>SAINT AIGNAN SUR CHER</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>706</td><td>SAINT AMAND</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>707</td><td>SAINT AUBIN-DE-BLAYE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>708</td><td>SAINT-AVOLD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>709</td><td>SAINT DENIS-LES-SENS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>710</td><td>SAINT ETIENNE AU TEMPLE</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>711</td><td>SAINT-ÉTIENNE-AU-TEMPLE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>713</td><td>Saint-Gaudens</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>714</td><td>SAINT GENIS</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>715</td><td>SAINT GENIX SUR GUIERS</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>716</td><td>SAINT GERMAIN-LAXIS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>717</td><td>SAINT GIBRIEN</td><td>Cofiroute | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>718</td><td>SAINT HILAIRE LES ANDRESIS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>719</td><td>SAINT JEAN D'ANGELY</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>720</td><td>SAINT JEAN DE LINIERES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>721</td><td>Saint-Jory</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>722</td><td>SAINT MAIXENT / LUSIGNAN</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>723</td><td>SAINT MARCELLIN</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>724</td><td>SAINT MARTIN-DU-FRESNE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>725</td><td>Saint-Martory</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>726</td><td>SAINT MAURICE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>727</td><td>SAINT-OMER</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>728</td><td>SAINT PIERRE D'ALBIGNY</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>729</td><td>SAINT-QUENTIN NORD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>730</td><td>SAINT-QUENTIN SUD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>731</td><td>Péage de Saint-Selve</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>732</td><td>SAINT THIBAULT</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>733</td><td>Sainte-Eulalie</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>734</td><td>Sainte-Hermine</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>735</td><td>SAINTE-MARIE-AUX-CHÊNES</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>736</td><td>Sainte-Maure</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>737</td><td>SAINTE MENEHOULD</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>738</td><td>SAINTE-MENEHOULD</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>739</td><td>Saintes</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>740</td><td>SALBRIS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>741</td><td>Salies</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>744</td><td>Salon nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>745</td><td>Salon ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>746</td><td>Salon sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>747</td><td>SALOUËL</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>748</td><td>Péage de Sames</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>749</td><td>Sapiac</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>750</td><td>SARRE-UNION</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>751</td><td>SARREGUEMINES</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>752</td><td>SAUMUR (VIVY)</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>753</td><td>SAVERNE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>755</td><td>Savigny-sur-Clairis</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>758</td><td>Sées</td><td>ALIS</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>759</td><td>Sées</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>760</td><td>SEES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>761</td><td>SÉES NORD</td><td>Alicorne</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>762</td><td>SEICHES</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>763</td><td>Seiches-sur-le-Loir</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>764</td><td>SELLES SUR CHER</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>765</td><td>Sénas</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>766</td><td>SENLIS</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>768</td><td>Sète</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>769</td><td>Seurre</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>770</td><td>SEYNOD SUD</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>771</td><td>Sigean</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>772</td><td>SILLE LE GUILLAUME / MAMERS</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>773</td><td>SILLE LE GUILLAUME / SABLE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>774</td><td>Sisteron-nord</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>775</td><td>Sisteron-sud</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>776</td><td>Six-Fours-Les Plages</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>777</td><td>SOIRANS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>778</td><td>Sommesous</td><td>APRR | ASFC | Cofiroute | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>780</td><td>Souillac</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>781</td><td>Soumoulou</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>782</td><td>Soupetard</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>785</td><td>St-Amand-Montrond</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>786</td><td>St-André-de-Cubzac</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>787</td><td>Péage de St-Arnoult</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>788</td><td>St-Aubin-de-Blaye</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>789</td><td>Péage de St-Christophe</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>790</td><td>St-Cyr-Les Lecques</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>791</td><td>ST-DENIS-LES-SENS</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>792</td><td>St-Etienne-au-Temple</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>793</td><td>St-Genis</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>796</td><td>St-Geours-de-Maremne</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>797</td><td>St-Germain-Laval</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>798</td><td>St-Germain-Laxis</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>800</td><td>Péage de St-Germain-les-Vergnes</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>801</td><td>ST GERMAIN LES VERGNES</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>802</td><td>St-Gibrien</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>804</td><td>St-Hilaire-les-Andrésis</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>805</td><td>St-Jean-de-Luz nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>806</td><td>St-Jean-de-Luz sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>807</td><td>St-Jean-de-Védas</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>808</td><td>St-Jean-d’Angély</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>809</td><td>ST-JEAN-LES-DEUX-JUMEAUX</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>810</td><td>St-Julien Montdenis</td><td>SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>811</td><td>St-Julien Sancy</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>812</td><td>ST JULIEN / SANCY</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>813</td><td>St-Laurent-du-Var</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>814</td><td>St-Maixent-Soudan</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>816</td><td>ST MARTIN BELLEVUE A410</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>817</td><td>Peage de St-Martin-De-Crau</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>818</td><td>St-Martin-De-Crau Est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>819</td><td>St-Martin-du-Fresne</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>820</td><td>Péage de St-Maurice</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>821</td><td>St-Maximin</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>822</td><td>St-Michel Barrière</td><td>SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE<br>DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>823</td><td>St-Michel Echangeur</td><td>SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>825</td><td>St-Paul-lez-Durance</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>826</td><td>ST PIERRE BELLEVILLE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>827</td><td>St-Pierre de Belleville/Epierre</td><td>SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>828</td><td>St-Pierre D’Albigny</td><td>SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>829</td><td>St-Priest centre</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>830</td><td>ST QUENTIN FAL. BARRIERE</td><td>AREA</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>831</td><td>ST QUENTIN FAL. BRETELLE</td><td>AREA</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BRETELLE</td></tr>
+<tr style="background:#bbf7d0"><td>832</td><td>ST-ROMAIN-DE-COLBOSC</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>833</td><td>Péage de St-Romain-de-Popey</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>834</td><td>St-Romain-sur-Cher</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>835</td><td>ST-SAËNS</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>836</td><td>St-Thibault</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>837</td><td>Ste-Hélène Barrière</td><td>AREA | SFTRF</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>838</td><td>STE HERMINE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>839</td><td>Ste-Marie de Cuines</td><td>AREA | SFTRF</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>840</td><td>STE MENEHOULD</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>842</td><td>SYLANS</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>843</td><td>Sylans sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>845</td><td>Tain</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>849</td><td>Tarare ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>850</td><td>Tarbes est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>851</td><td>Tarbes ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>852</td><td>GARE TGV</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>853</td><td>THENNELIERES</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>854</td><td>Péage de Thenon</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>855</td><td>Thenon est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>856</td><td>Théze</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>857</td><td>Thiers est</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>858</td><td>Thiers ouest</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>859</td><td>Thivars</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>860</td><td>Thouarcé</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>861</td><td>TIL CHATEL</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>862</td><td>Tonnay-Charente</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>863</td><td>TORVILLIERS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>864</td><td>Toulon-ouest</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>865</td><td>Peage de Toulouse est</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>866</td><td>Péage de Toulouse nord/est</td><td>ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>867</td><td>Péage de Toulouse nord/ouest</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>868</td><td>Péage de Toulouse sud/est</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>871</td><td>Tournay</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>872</td><td>TOURNUS</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>875</td><td>TOURS CENTRE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>876</td><td>TOURS CENTRE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>878</td><td>TOURS CENTRE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>879</td><td>TOURS CENTRE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>884</td><td>TOURS NORD</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>885</td><td>TOUTAINVILLE</td><td>sapn</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>886</td><td>TROARN</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>887</td><td>TULLE EST</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>888</td><td>TULLE EST</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>889</td><td>TULLE NORD</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>890</td><td>TULLE NORD</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>891</td><td>TULLINS</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>892</td><td>Urt</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>893</td><td>URY</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>894</td><td>USSEL EST</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>895</td><td>USSEL EST</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>896</td><td>USSEL OUEST</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>897</td><td>USSEL OUEST</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>898</td><td>Vaiges</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>899</td><td>Péage de Val de Loing barrière</td><td>APRR | ASFC</td><td>C</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>900</td><td>VAL DE LOING-SOUPPES</td><td>APRR | ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>903</td><td>Valence-d’Agen</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>904</td><td>Valence nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>905</td><td>Valence sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>906</td><td>VALLÉE DE L'AUBE</td><td>APRR | Cofiroute | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>907</td><td>VALLÉE DE LA NIÈVRE</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>908</td><td>Vallée de l’Aube</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>909</td><td>VATRY</td><td>APRR | ASFC | Cofiroute | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>910</td><td>Péage de Veauchette</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>911</td><td>Péage de Veigné</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>912</td><td>VEIGNE</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>913</td><td>Vendargues</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>914</td><td>Vénissieux</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>915</td><td>Verdun</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>916</td><td>VERDUN</td><td>APRR | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>918</td><td>VIEILLEVILLE</td><td>Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>919</td><td>Peage de Vienne</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>920</td><td>Vienne nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>921</td><td>Vienne sud</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>922</td><td>VIERZON EST</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>923</td><td>VIERZON NORD</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>924</td><td>VILLE SOUS LA FERTE</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>925</td><td>VILLE SOUS LAFERTE</td><td>APRR | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>926</td><td>VILLEFONTAINE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>927</td><td>Villefranche-de-Lauragais</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>928</td><td>Péage de Villefranche-Limas</td><td>APRR | ASFC | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>929</td><td>VILLEFRANCHE-LIMAS</td><td>APRR | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>930</td><td>Villefranche nord</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>932</td><td>Villefranche-sur-Cher</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>933</td><td>Villefranche ville</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>934</td><td>VILLENEUVE-DONDAGRE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>935</td><td>Villeneuve-Loubet/Cagnes-ouest</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>936</td><td>Villeneuve-Loubet Plage</td><td>escota</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>937</td><td>VILLERS-BRETONNEUX</td><td>sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>938</td><td>VINAY</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>939</td><td>Viriat</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>940</td><td>Péage de Virsac</td><td>ASFC</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>941</td><td>VIRSAC</td><td>Cofiroute</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>942</td><td>Péage de Viry</td><td>APRR | ASFC | ATMB | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>945</td><td>Vivy Saumur</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>946</td><td>VOIE SACREE</td><td>APRR | ASFC | Cofiroute | aliea</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>947</td><td>VOIE SACRÉE</td><td>APRR | aliea | sanef</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>948</td><td>VOIRON</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>949</td><td>VOREPPE BARRIERE</td><td>AREA</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">BARRIERE</td></tr>
+<tr style="background:#bbf7d0"><td>950</td><td>Vouillé</td><td>ASFC | Cofiroute</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>951</td><td>Vulaines</td><td>APRR | ASFC | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>952</td><td>Vulcania Bromont</td><td>APRR | ASFC | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>953</td><td>VULCANIA-BROMONT</td><td>APRR | Cofiroute | aliea</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em">DUPLICATE_COORD</td></tr>
+<tr style="background:#bbf7d0"><td>954</td><td>YERVILLE</td><td>sapn</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>955</td><td>YVETOT</td><td>sapn</td><td>B</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+<tr style="background:#bbf7d0"><td>956</td><td>ZI nord</td><td>ASFC</td><td>A</td><td>0</td><td>LIKELY_VALID</td><td style="font-size:0.8em"></td></tr>
+
+</tbody>
+</table>
+</body>
+</html>
