@@ -185,7 +185,7 @@ def test_shape_response_dijon_lyon_has_fastest_matching_plain_dijkstra(base_grap
     assert fastest["distance_m"] == pytest.approx(expected_fastest.distance_m)
 
     assert any("cheapest" in o["labels"] for o in options)
-    assert any("best_value" in o["labels"] for o in options)
+    assert any("toll_optimised" in o["labels"] for o in options)
 
     for opt in options:
         assert len(opt["gates"]) == len(opt["gate_detail"])

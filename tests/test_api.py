@@ -116,7 +116,7 @@ def test_route_endpoint_fastest_option_matches_cli():
     assert "route_id" in fastest[0]
 
     assert any("cheapest" in o["labels"] for o in options)
-    assert any("best_value" in o["labels"] for o in options)
+    assert any("toll_optimised" in o["labels"] for o in options)
 
 
 @requires_osrm
@@ -195,8 +195,8 @@ def test_geometry_endpoint_returns_geojson_for_selected_option():
         geo_resp = client.get(f"/geometry/{route_id}")
     assert geo_resp.status_code == 200
     geometry = geo_resp.json()
-    assert geometry["type"] == "LineString"
-    assert len(geometry["coordinates"]) >= 2
+    assert geometry["geometry"]["type"] == "LineString"
+    assert len(geometry["geometry"]["coordinates"]) >= 2
 
 
 @requires_osrm

@@ -357,6 +357,7 @@ def build_graph(
     no_coords_count = 0
     no_osrm_route_count = 0
     freeflow_selfloop_count = 0
+    zero_price_dropped_count = 0
     for from_id, to_id, operator, c1, c2, c3, c4, c5, distance_km in fare_rows:
         if from_id not in gate_position or to_id not in gate_position:
             # References a gate with no lat/lon, a quarantined suspect_gates
@@ -393,6 +394,17 @@ def build_graph(
             freeflow_selfloop_count += 1
             toll_edge_count += 1
             continue
+
+        # Drop zero-price fare rows for long-distance pairs. A zero fare over
+        # tens of km has no structural evidence of being a genuine free section
+        # and acts as a wormhole: Dijkstra exploits it to traverse a long
+        # tolled section for nothing. Short zero-price hops (<=8 km, the same
+        # proximity threshold used by remediate_zero_price.py) are kept as
+        # plausible free short connectors / adjacent-interchange bypasses.
+        if c1 == 0 and c2 == 0 and c3 == 0 and c4 == 0 and c5 == 0:
+            if (distance_km or 999.0) > 8.0:
+                zero_price_dropped_count += 1
+                continue
 
         pi, pj = _matrix_index(from_id), _matrix_index(to_id)
         if pi is None or pj is None:
@@ -436,6 +448,13 @@ def build_graph(
             "%d toll edges are free-flow single-gantry self-loops (e.g. A14); "
             "priced at zero physical distance/duration",
             freeflow_selfloop_count,
+        )
+    if zero_price_dropped_count:
+        logger.warning(
+            "%d zero-price fare rows (distance_km > 8 km) dropped; they have no "
+            "structural evidence of being a genuine free section and act as routing "
+            "wormholes. Run tollroute.etl.remediate_zero_price for full disposition.",
+            zero_price_dropped_count,
         )
 
     tollfree_edge_count = 0

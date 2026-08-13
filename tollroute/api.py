@@ -67,6 +67,7 @@ from functools import lru_cache
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from tollroute import cost
@@ -141,6 +142,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 def _graph_copy(g: graph_mod.Graph) -> graph_mod.Graph:
     # add_access_edges mutates its graph argument in place (flagged as a
@@ -173,9 +181,9 @@ def _route_id(origin: tuple[float, float], destination: tuple[float, float], gat
     return hashlib.sha1(key.encode()).hexdigest()[:16]
 
 
-def _prune_geometry_cache(cache: dict[str, tuple[float, list[tuple[float, float]]]]) -> None:
+def _prune_geometry_cache(cache: dict) -> None:
     now = time.time()
-    for rid in [rid for rid, (expiry, _wp) in cache.items() if expiry <= now]:
+    for rid in [rid for rid, entry in cache.items() if entry[0] <= now]:
         del cache[rid]
 
 
@@ -242,10 +250,27 @@ def get_route(
     expiry = time.time() + GEOMETRY_TTL_S
     options = [dict(o) for o in result["options"]]
     for option in options:
-        gates = option["gates"]
-        waypoints = [origin, *(app.state.graph.gate_coords[g] for g in gates), destination]
-        route_id = _route_id(origin, destination, gates)
-        app.state.geometry_cache[route_id] = (expiry, waypoints)
+        # Use only TOLL-edge gate endpoints as geometry waypoints (Bug 1 fix):
+        # gates visited only via TOLL_FREE edges lie on N-roads, not motorway
+        # toll booths — using their coordinates as OSRM waypoints routes the
+        # motorway between them and displays unpriced toll sections on the map.
+        # When priced_gates is empty (genuinely toll-free route), waypoints
+        # collapse to [origin, destination]: OSRM's single access leg correctly
+        # flags any toll roads it encounters via access_leg_toll_roads.
+        priced_gates = option.get("priced_gates") or []
+        waypoints = [origin, *(app.state.graph.gate_coords[g] for g in priced_gates), destination]
+        route_id = _route_id(origin, destination, priced_gates)
+        # Recompute toll_leg_indices relative to priced_gates waypoints:
+        # leg j+1 goes from priced_gates[j] to priced_gates[j+1], so the
+        # leg that prices a toll section starting at from_gare_id is at
+        # priced_gate_idx[from_gare_id] + 1.
+        priced_gate_idx = {gid: i for i, gid in enumerate(priced_gates)}
+        toll_leg_indices = set()
+        for tg in option.get("toll_gates_detail", []):
+            from_id = tg["from_gare_id"]
+            if from_id in priced_gate_idx:
+                toll_leg_indices.add(priced_gate_idx[from_id] + 1)
+        app.state.geometry_cache[route_id] = (expiry, waypoints, toll_leg_indices)
         option["route_id"] = route_id
 
     logging_mod.log_route_response(origin, destination, vehicle_class, {**result, "options": options})
@@ -284,16 +309,21 @@ def get_health():
     return JSONResponse(status_code=200 if (matrix_loaded and osrm_reachable) else 503, content=body)
 
 
+@app.get("/favicon.ico")
+def get_favicon():
+    return JSONResponse(status_code=204)
+
+
 @app.get("/geometry/{route_id}")
 def get_geometry(route_id: str):
     _prune_geometry_cache(app.state.geometry_cache)
     entry = app.state.geometry_cache.get(route_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="unknown or expired route_id")
-    _expiry, waypoints = entry
+    _expiry, waypoints, toll_leg_indices = entry
 
     try:
-        geometry = osrm_client_mod.route_geometry(app.state.osrm_client, waypoints)
+        geometry = osrm_client_mod.route_geometry(app.state.osrm_client, waypoints, toll_leg_indices)
     except osrm_client_mod.OSRMUnavailableError:
         return {"osrm_unavailable": True}
 

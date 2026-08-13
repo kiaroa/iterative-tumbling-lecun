@@ -192,21 +192,59 @@ def many_to_one_table(
     return out
 
 
-def route_geometry(client: httpx.Client, waypoints: list[tuple[float, float]]) -> dict:
-    """Full-geometry /route across an ordered list of (lat, lon) waypoints
-    (origin, physical gate points along the chosen gate chain, destination),
-    for the lazy `/geometry/{route_id}` endpoint.
+def _step_is_toll(step: dict) -> bool:
+    return any("toll" in i.get("classes", []) for i in step.get("intersections", []))
 
-    **Judgement call, flagged:** tolls are allowed end to end rather than
-    replaying each leg's original exclude=toll setting. The priced route and
-    its toll/duration/distance totals are already fixed by the Dijkstra
-    result before this ever runs (spec: "All geometry from OSRM; Python
-    never touches a road segment" - geometry is a display concern, not a
-    pricing one), so the polyline only needs to be a visually plausible path
-    through the same waypoints, not per-leg toll-exclusion-faithful.
+
+def route_geometry(
+    client: httpx.Client,
+    waypoints: list[tuple[float, float]],
+    toll_leg_indices: set[int] | None = None,
+) -> dict:
+    """Full-geometry /route with contiguous toll/free segments from OSRM road
+    classes. Returns `unpriced_toll_roads` listing toll roads detected by OSRM
+    that are NOT within the gate-to-gate priced legs (i.e., in access legs).
+    Note: /route does not support exclude=toll on this OSRM build, so geometry
+    uses toll-allowed routing throughout; unpriced sections are flagged only.
     """
+    n = len(waypoints)
+    n_legs = n - 1
+    priced_leg_indices = set(toll_leg_indices or [])
+    # Access legs: first and last (origin→gate[0], gate[-1]→destination)
+    access_leg_indices = {0, n_legs - 1} if n_legs > 1 else {0}
+
     coords = ";".join(f"{lon},{lat}" for lat, lon in waypoints)
-    data = _get_json(client, f"/route/v1/car/{coords}?overview=full&geometries=geojson")
+    data = _get_json(client, f"/route/v1/car/{coords}?overview=full&geometries=geojson&steps=true")
     if data.get("code") != "Ok":
         raise RuntimeError(f"OSRM /route geometry failed: {data}")
-    return data["routes"][0]["geometry"]
+    route = data["routes"][0]
+    geometry = route["geometry"]
+
+    all_roads: list[str] = []
+    segments: list[dict] = []
+    unpriced_toll_roads: list[str] = []
+
+    for leg_idx, leg in enumerate(route.get("legs", [])):
+        is_access_leg = leg_idx in access_leg_indices
+        for step in leg.get("steps", []):
+            ref = (step.get("ref") or step.get("name") or "").strip()
+            if ref and (not all_roads or all_roads[-1] != ref):
+                all_roads.append(ref)
+            step_geom = step.get("geometry", {})
+            step_coords = step_geom.get("coordinates", []) if isinstance(step_geom, dict) else []
+            if not step_coords:
+                continue
+            is_toll = _step_is_toll(step)
+            if is_toll and is_access_leg and ref and ref not in unpriced_toll_roads:
+                unpriced_toll_roads.append(ref)
+            if segments and segments[-1]["is_toll"] == is_toll:
+                segments[-1]["coords"].extend(step_coords[1:])
+            else:
+                segments.append({"is_toll": is_toll, "coords": list(step_coords)})
+
+    return {
+        "geometry": geometry,
+        "roads": all_roads,
+        "segments": segments,
+        "access_leg_toll_roads": unpriced_toll_roads,
+    }

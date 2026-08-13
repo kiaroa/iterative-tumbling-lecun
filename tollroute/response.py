@@ -97,15 +97,17 @@ def gate_match_detail(conn: sqlite3.Connection, gare_ids: list[int]) -> list[dic
         return []
     placeholders = ",".join("?" for _ in gare_ids)
     rows = conn.execute(
-        f"SELECT gare_id, match_tier, match_agreement FROM gates WHERE gare_id IN ({placeholders})",
+        f"SELECT gare_id, match_tier, match_agreement, canonical_name, all_routes FROM gates WHERE gare_id IN ({placeholders})",
         gare_ids,
     ).fetchall()
-    by_id = {gid: (tier, agreement) for gid, tier, agreement in rows}
+    by_id = {gid: (tier, agreement, name, routes) for gid, tier, agreement, name, routes in rows}
     return [
         {
             "gare_id": gid,
-            "match_tier": by_id.get(gid, (None, None))[0],
-            "match_agreement": by_id.get(gid, (None, None))[1],
+            "name": by_id.get(gid, (None, None, None, None))[2],
+            "routes": by_id.get(gid, (None, None, None, None))[3],
+            "match_tier": by_id.get(gid, (None, None, None, None))[0],
+            "match_agreement": by_id.get(gid, (None, None, None, None))[1],
         }
         for gid in gare_ids
     ]
@@ -159,6 +161,15 @@ class RouteOption:
     eur_per_hour_saved: float | None
     same_operator_split: bool
     gate_detail: tuple[dict, ...]
+    toll_segments: tuple[float, ...] = ()
+    toll_gates_detail: tuple[dict, ...] = ()
+    toll_leg_indices: tuple[int, ...] = ()
+    # Gate IDs that are endpoints of TOLL edges only (subset of `gates`).
+    # Used by api.py to build geometry waypoints: gates visited only via
+    # TOLL_FREE edges are on N-roads, not motorway toll booths, so using their
+    # coordinates as OSRM waypoints would route the motorway between them and
+    # show unpriced toll sections on the map.
+    priced_gates: tuple[int, ...] = ()
 
     def as_dict(self) -> dict:
         return {
@@ -167,36 +178,93 @@ class RouteOption:
             "duration_s": self.duration_s,
             "distance_m": self.distance_m,
             "gates": list(self.gates),
+            "priced_gates": list(self.priced_gates),
             "saving_vs_fastest_eur": self.saving_vs_fastest_eur,
             "extra_minutes": self.extra_minutes,
             "extra_km": self.extra_km,
             "eur_per_hour_saved": self.eur_per_hour_saved,
             "same_operator_split": self.same_operator_split,
             "gate_detail": list(self.gate_detail),
+            "toll_segments": list(self.toll_segments),
+            "toll_gates_detail": list(self.toll_gates_detail),
+            "toll_leg_indices": list(self.toll_leg_indices),
         }
 
 
 def _build_option(
-    route: Route, fastest: Route, labels: set[str], conn: sqlite3.Connection
+    route: Route, fastest: Route, labels: set[str], conn: sqlite3.Connection, vehicle_class: int
 ) -> RouteOption:
     chain = gate_chain(route)
     extra_km, extra_minutes, saving, eur_per_hour_saved = _detour_metrics(route, fastest)
+    toll_segments = tuple(
+        e.toll_eur.get(vehicle_class, 0) for e in route.edges
+        if e.toll_eur is not None and isinstance(e.toll_eur, dict) and e.toll_eur.get(vehicle_class, 0) > 0
+    )
+
+    gate_details = gate_match_detail(conn, chain)
+    gate_detail_by_id = {g["gare_id"]: g for g in gate_details}
+
+    toll_gates_detail = []
+    toll_leg_indices_list: list[int] = []
+    chain_pos = 0  # tracks position in gate chain as we walk edges
+
+    for edge in route.edges:
+        if edge.toll_eur is None or not isinstance(edge.toll_eur, dict):
+            continue
+        cost = edge.toll_eur.get(vehicle_class, 0)
+        if cost <= 0:
+            continue
+        from_id = edge.from_node.gare_id
+        to_id = edge.to_node.gare_id
+        from_g = gate_detail_by_id.get(from_id, {})
+        to_g = gate_detail_by_id.get(to_id, {})
+        roads = "|".join(filter(None, [from_g.get("routes", ""), to_g.get("routes", "")]))
+        toll_gates_detail.append({
+            "from_gare_id": from_id,
+            "to_gare_id": to_id,
+            "from_name": from_g.get("name", f"Gate {from_id}"),
+            "to_name": to_g.get("name", f"Gate {to_id}"),
+            "routes": roads,
+            "toll_eur": cost,
+        })
+        # Find to_id in chain starting from current position; leg k reaches chain[k]
+        for k in range(chain_pos, len(chain)):
+            if chain[k] == to_id:
+                toll_leg_indices_list.append(k)
+                chain_pos = k + 1
+                break
+
+    # Derive priced_gates: ordered unique gate IDs that are TOLL-edge endpoints.
+    # Excludes gates visited only via TOLL_FREE edges (N-road routing), which
+    # must not be used as geometry waypoints (see RouteOption.priced_gates docstring).
+    priced_gate_ids_seen: set[int] = set()
+    priced_gate_ids: list[int] = []
+    for tg in toll_gates_detail:
+        for gid in (tg["from_gare_id"], tg["to_gare_id"]):
+            if gid not in priced_gate_ids_seen:
+                priced_gate_ids.append(gid)
+                priced_gate_ids_seen.add(gid)
+
     return RouteOption(
         labels=tuple(sorted(labels)),
         toll_eur=route.toll_eur,
         duration_s=route.duration_s,
         distance_m=route.distance_m,
         gates=tuple(chain),
+        priced_gates=tuple(priced_gate_ids),
         saving_vs_fastest_eur=saving,
         extra_minutes=extra_minutes,
         extra_km=extra_km,
         eur_per_hour_saved=eur_per_hour_saved,
         same_operator_split=same_operator_split(route),
-        gate_detail=tuple(gate_match_detail(conn, chain)),
+        gate_detail=tuple(gate_details),
+        toll_segments=toll_segments,
+        toll_gates_detail=tuple(toll_gates_detail),
+        toll_leg_indices=tuple(toll_leg_indices_list),
     )
 
 
-_LABEL_PRIORITY = {"fastest": 0, "cheapest": 1, "best_value": 2}
+_LABEL_PRIORITY = {"fastest": 0, "cheapest": 1, "toll_optimised": 2, "best_value": 2, "toll_free_route": 3}
 
 
 def shape_response(
@@ -245,7 +313,18 @@ def shape_response(
     ]
     frontier = dedupe_by_gate_chain(swept)
 
-    cheapest_route = min(frontier, key=lambda r: r.toll_eur)
+    # Partition: routes with a positive toll price vs €0 alternatives.
+    # "cheapest" always means the minimum *positive* toll cost route; €0 routes
+    # (all TOLL_FREE edges, genuine N-road alternatives) are offered separately
+    # as "toll_free_route" subject to the normal detour guard rail. Without this
+    # split, a toll-free N-road alternative wins the "cheapest" label and its
+    # gate coordinates (which lie on the motorway) are used as OSRM waypoints,
+    # producing a displayed route on the motorway with €0 price — a mismatch
+    # that suggests the motorway is free when it isn't.
+    priced_frontier = [r for r in frontier if r.toll_eur > 0]
+    tollfree_frontier = [r for r in frontier if r.toll_eur == 0]
+
+    cheapest_route = min(priced_frontier, key=lambda r: r.toll_eur) if priced_frontier else None
 
     best_value_route = min(
         pareto_sweep(
@@ -268,24 +347,38 @@ def shape_response(
             labels_by_key[key].add(label)
 
     register(fastest_route, "fastest")
-    register(cheapest_route, "cheapest")
-    register(best_value_route, "best_value")
+    # toll_optimised: the route minimising generalised cost at the user's VoT.
+    # Also label it "cheapest" if it has the lowest raw (positive) toll cost on
+    # the priced frontier.
+    register(best_value_route, "toll_optimised")
+    if cheapest_route is not None:
+        if tuple(gate_chain(cheapest_route)) == tuple(gate_chain(best_value_route)):
+            labels_by_key[tuple(gate_chain(cheapest_route))].add("cheapest")
+        else:
+            # cheapest and toll_optimised diverge; keep cheapest only if it's
+            # meaningfully different from both fastest and toll_optimised.
+            cheapest_key = tuple(gate_chain(cheapest_route))
+            if cheapest_key != tuple(gate_chain(fastest_route)):
+                register(cheapest_route, "cheapest")
 
-    for route in frontier:
-        key = tuple(gate_chain(route))
-        if key in labels_by_key:
-            continue
-        if toll_gate_hops(route) > MAX_GATE_HOPS:
-            continue
-        extra_km, extra_minutes, _saving, eur_per_hour_saved = _detour_metrics(route, fastest_route)
-        if not _meets_detour_floor(extra_km, extra_minutes):
-            continue
-        if not _is_worthwhile(eur_per_hour_saved, vot):
-            continue
-        register(route, None)
+    # Genuinely toll-free routes (all TOLL_FREE edges, €0): offer with a
+    # descriptive label subject to the normal detour guard rail. They are only
+    # useful to show when they represent a meaningfully different routing choice
+    # (e.g. a scenic N-road alternative, not marginal noise).
+    for tf_route in tollfree_frontier:
+        tf_key = tuple(gate_chain(tf_route))
+        if tf_key in routes_by_key:
+            continue  # already registered as fastest or toll_optimised
+        extra_km, extra_minutes, _, _ = _detour_metrics(tf_route, fastest_route)
+        if _meets_detour_floor(extra_km, extra_minutes):
+            register(tf_route, "toll_free_route")
+
+    # Unlabelled Pareto points are dropped — they are intermediate options
+    # whose access-leg geometry often doesn't match Dijkstra's toll-free
+    # routing assumptions, producing misleading displayed prices.
 
     options = [
-        _build_option(route, fastest_route, labels_by_key[key], conn)
+        _build_option(route, fastest_route, labels_by_key[key], conn, vehicle_class)
         for key, route in routes_by_key.items()
     ]
     options.sort(
