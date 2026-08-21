@@ -35,6 +35,23 @@ def test_geocode_returns_top_scored_lat_lon():
     assert result == (47.3220, 5.0415)
 
 
+def test_geocode_passes_type_param():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params.get("type") == "municipality"
+        return httpx.Response(200, json=_ban_response(43.1667, 3.0501, "Narbonne"))
+
+    result = geocode.geocode(_client(handler), "Narbonne", type="municipality")
+    assert result == (43.1667, 3.0501)
+
+
+def test_geocode_omits_type_when_none():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert "type" not in request.url.params
+        return httpx.Response(200, json=_ban_response(47.3220, 5.0415, "Dijon"))
+
+    geocode.geocode(_client(handler), "Dijon")
+
+
 def test_geocode_raises_on_no_match():
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json=_no_match_response())
