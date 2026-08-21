@@ -1,9 +1,9 @@
 """Phase 3: Overpass API toll booth check per gate.
 
-Queries OSM for barrier=toll_booth / highway=toll_gantry within 300m of each gate.
-Batches up to 50 gates per Overpass request to minimise round-trips.
+One GET request per gate (avoids 406 from large batched POSTs).
+Rate-limited by SLEEP_BETWEEN_REQUESTS to be polite to the public instance.
 
-No API key required. Rate-limited by 1s sleep between batches.
+No API key required.
 """
 
 from __future__ import annotations
@@ -14,48 +14,41 @@ from pathlib import Path
 
 import httpx
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+OVERPASS_INSTANCES = [
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+]
 RADIUS_M = 300
-BATCH_SIZE = 50
-SLEEP_BETWEEN_BATCHES = 1.5  # seconds
+SLEEP_BETWEEN_REQUESTS = 1.5
 OUT = Path("analysis/gate_validation/overpass_check.csv")
 
+_HEADERS = {
+    "User-Agent": "TollRouteGateValidation/1.0 (research project)",
+    "Accept": "application/json",
+}
 
-def _overpass_query(gates: list[dict]) -> dict[str, int]:
-    """Returns {gare_id: count_of_toll_features_within_radius}."""
-    parts = []
-    for g in gates:
-        lat, lon = g["lat"], g["lon"]
-        parts.append(
-            f'node(around:{RADIUS_M},{lat},{lon})[barrier=toll_booth];'
-            f'node(around:{RADIUS_M},{lat},{lon})[highway=toll_gantry];'
-            f'node(around:{RADIUS_M},{lat},{lon})[toll=yes][highway];'
-            f'way(around:{RADIUS_M},{lat},{lon})[barrier=toll_booth];'
-        )
-    ql = "[out:json][timeout:30];\n(\n" + "\n".join(parts) + "\n);\nout center;"
 
-    resp = httpx.post(OVERPASS_URL, data={"data": ql}, timeout=60.0)
-    resp.raise_for_status()
-    elements = resp.json().get("elements", [])
-
-    # map each returned element back to the nearest gate
-    counts: dict[str, int] = {g["gare_id"]: 0 for g in gates}
-    for elem in elements:
-        elat = elem.get("lat") or elem.get("center", {}).get("lat")
-        elon = elem.get("lon") or elem.get("center", {}).get("lon")
-        if elat is None:
-            continue
-        # find closest gate within radius
-        best_gid, best_d = None, float("inf")
-        for g in gates:
-            dlat = float(g["lat"]) - elat
-            dlon = float(g["lon"]) - elon
-            d2 = dlat * dlat + dlon * dlon
-            if d2 < best_d:
-                best_d, best_gid = d2, g["gare_id"]
-        if best_gid:
-            counts[best_gid] += 1
-    return counts
+def _query_one(lat: str, lon: str) -> int:
+    ql = (
+        f"[out:json][timeout:20];\n(\n"
+        f"  node(around:{RADIUS_M},{lat},{lon})[barrier=toll_booth];\n"
+        f"  node(around:{RADIUS_M},{lat},{lon})[highway=toll_gantry];\n"
+        f"  node(around:{RADIUS_M},{lat},{lon})[toll=yes][highway];\n"
+        f"  way(around:{RADIUS_M},{lat},{lon})[barrier=toll_booth];\n"
+        f");\nout count;"
+    )
+    last_exc: Exception | None = None
+    for url in OVERPASS_INSTANCES:
+        try:
+            resp = httpx.post(url, data={"data": ql}, headers=_HEADERS, timeout=30.0)
+            resp.raise_for_status()
+            data = resp.json()
+            return int(data.get("elements", [{}])[0].get("tags", {}).get("total", 0))
+        except Exception as exc:
+            last_exc = exc
+            time.sleep(2.0)
+    raise last_exc  # type: ignore
 
 
 def check_overpass(
@@ -68,31 +61,27 @@ def check_overpass(
     if limit:
         gates_with_coords = gates_with_coords[:limit]
 
-    print(f"Phase 3: Overpass check for {len(gates_with_coords)} gates ({BATCH_SIZE}/batch)")
+    print(f"Phase 3: Overpass check for {len(gates_with_coords)} gates (1 req/gate, {SLEEP_BETWEEN_REQUESTS}s gap)")
 
-    all_counts: dict[str, int] = {}
-    batches = [gates_with_coords[i:i + BATCH_SIZE] for i in range(0, len(gates_with_coords), BATCH_SIZE)]
-    for bi, batch in enumerate(batches):
-        print(f"  batch {bi + 1}/{len(batches)} ({len(batch)} gates) ...", end=" ", flush=True)
-        try:
-            counts = _overpass_query(batch)
-            all_counts.update(counts)
-            print("ok")
-        except Exception as exc:
-            print(f"ERROR: {exc}")
-            for g in batch:
-                all_counts[g["gare_id"]] = -1  # -1 = query failed
-        if bi < len(batches) - 1:
-            time.sleep(SLEEP_BETWEEN_BATCHES)
+    counts: dict[str, int] = {}
+    for i, g in enumerate(gates_with_coords):
+            try:
+                counts[g["gare_id"]] = _query_one(g["lat"], g["lon"])
+                print(".", end="", flush=True)
+            except Exception as exc:
+                counts[g["gare_id"]] = -1
+                print(f"\n  gate {g['gare_id']} ({g['canonical_name']}): {exc}")
+        if i < len(gates_with_coords) - 1:
+            time.sleep(SLEEP_BETWEEN_REQUESTS)
+    print()
 
-    # merge back into all gates
     rows_out = []
     for g in all_gates:
-        count = all_counts.get(g["gare_id"])
+        count = counts.get(g["gare_id"])
         rows_out.append({
             **g,
             "osm_toll_count": "" if count is None else count,
-            "osm_no_toll_infra": "" if count is None else ("1" if count == 0 else "0"),
+            "osm_no_toll_infra": "" if count is None else ("1" if count <= 0 else "0"),
         })
 
     out.parent.mkdir(parents=True, exist_ok=True)
