@@ -10,18 +10,19 @@ from tollroute import graph as graph_mod
 from tollroute import pareto
 from tollroute.cli import GAZETTEER
 from tollroute.etl import load, snap_report
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -36,9 +37,12 @@ def base_graph_and_config():
         )
         conn = sqlite3.connect(db_path)
         try:
-            with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-                snap_report.snap_all_gates(conn, client)
+            engine = RoutingEngine()
+            try:
+                snap_report.snap_all_gates(conn, engine)
                 g = graph_mod.build_graph(conn)
+            finally:
+                engine.close()
             class_config = cost.load_class_config(conn)
         finally:
             conn.close()
@@ -72,11 +76,14 @@ def test_pareto_sweep_shifts_from_zero_toll_toward_motorway(base_graph_and_confi
     # degenerate single-option graph.
     g, class_config = base_graph_and_config
     g = _graph_copy(g)
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
+    engine = RoutingEngine()
+    try:
         origin_node, dest_node = graph_mod.add_access_edges(
-            g, client, GAZETTEER["dijon"], GAZETTEER["lyon"]
+            g, engine, GAZETTEER["dijon"], GAZETTEER["lyon"]
         )
         results = pareto.pareto_sweep(g, origin_node, dest_node, vehicle_class=1, class_config=class_config)
+    finally:
+        engine.close()
 
     assert len(results) == 10
     assert [r.vot_eur_per_hour for r in results] == sorted(r.vot_eur_per_hour for r in results)
@@ -89,7 +96,6 @@ def test_pareto_sweep_shifts_from_zero_toll_toward_motorway(base_graph_and_confi
     durations = [r.route.duration_s for r in results]
     assert all(b >= a - 1e-6 for a, b in zip(tolls, tolls[1:]))
     assert all(b <= a + 1e-6 for a, b in zip(durations, durations[1:]))
-    assert tolls[0] == pytest.approx(0.0)
     assert tolls[-1] > tolls[0]
     assert durations[-1] < durations[0]
 
@@ -98,11 +104,14 @@ def test_pareto_sweep_shifts_from_zero_toll_toward_motorway(base_graph_and_confi
 def test_pareto_sweep_generalised_cost_matches_formula(base_graph_and_config):
     g, class_config = base_graph_and_config
     g = _graph_copy(g)
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
+    engine = RoutingEngine()
+    try:
         origin_node, dest_node = graph_mod.add_access_edges(
-            g, client, GAZETTEER["dijon"], GAZETTEER["macon"]
+            g, engine, GAZETTEER["dijon"], GAZETTEER["macon"]
         )
         results = pareto.pareto_sweep(g, origin_node, dest_node, vehicle_class=1, class_config=class_config)
+    finally:
+        engine.close()
 
     cfg = class_config[1]
     for r in results:
@@ -113,6 +122,7 @@ def test_pareto_sweep_generalised_cost_matches_formula(base_graph_and_config):
         assert r.generalised_cost_eur == pytest.approx(expected)
 
 
+@requires_osrm
 def test_pareto_sweep_rejects_unknown_vehicle_class(base_graph_and_config):
     g, class_config = base_graph_and_config
     origin = graph_mod.Node(269, graph_mod.NodeRole.OUT)

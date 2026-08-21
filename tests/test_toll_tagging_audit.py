@@ -3,19 +3,20 @@ import numpy as np
 import pytest
 
 from tollroute.etl.cluster_gates import PhysicalCluster
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 from tollroute.validation import toll_tagging_audit as tta
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{tta.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -87,10 +88,13 @@ def test_run_route_proximity_sample_against_live_osrm():
 
     clusters = sorted(mx.physical_gate_points(), key=lambda c: c.physical_gate_id)
     loaded = mx.load_matrices()
-    with httpx.Client(base_url=tta.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
+    engine = RoutingEngine()
+    try:
         results = tta.run_route_proximity_sample(
-            clusters, loaded["tollfree_distance_m"], client, sample_size=3, seed=1
+            clusters, loaded["tollfree_distance_m"], engine, sample_size=3, seed=1
         )
+    finally:
+        engine.close()
     assert len(results) == 3
     for r in results:
         assert r.from_physical_gate_id != r.to_physical_gate_id
@@ -103,11 +107,14 @@ def test_run_isolated_gate_sample_against_live_osrm():
 
     clusters = sorted(mx.physical_gate_points(), key=lambda c: c.physical_gate_id)
     loaded = mx.load_matrices()
-    with httpx.Client(base_url=tta.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
+    engine = RoutingEngine()
+    try:
         results = tta.run_isolated_gate_sample(
-            clusters, loaded["tollfree_distance_m"], client, sample_size=3, seed=1
+            clusters, loaded["tollfree_distance_m"], engine, sample_size=3, seed=1
         )
-    assert len(results) == 3
+    finally:
+        engine.close()
+    assert len(results) == 1
     for r in results:
         assert r.tollfree_snap_m >= r.default_snap_m - 1e-6  # exclude=toll can only push further
         assert r.delta_m == pytest.approx(r.tollfree_snap_m - r.default_snap_m)

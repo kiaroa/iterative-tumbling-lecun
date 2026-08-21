@@ -4,18 +4,19 @@ import httpx
 import pytest
 
 from tollroute.etl import load, snap_report
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -34,8 +35,11 @@ def loaded_db(tmp_path):
 def test_snap_all_gates_populates_snap_columns(loaded_db):
     conn = sqlite3.connect(loaded_db)
     try:
-        with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=10.0) as client:
-            results = snap_report.snap_all_gates(conn, client)
+        engine = RoutingEngine()
+        try:
+            results = snap_report.snap_all_gates(conn, engine)
+        finally:
+            engine.close()
 
         assert len(results) > 0
         (snapped_count,) = conn.execute(
@@ -49,16 +53,17 @@ def test_snap_all_gates_populates_snap_columns(loaded_db):
 @requires_osrm
 def test_all_5_named_test_pairs_have_prices_and_distinct_routes(loaded_db):
     conn = sqlite3.connect(loaded_db)
+    engine = RoutingEngine()
     try:
-        with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=10.0) as client:
-            fare_results = [
-                snap_report.verify_fare_pair(conn, client, pair)
-                for pair in snap_report.FARE_TEST_PAIRS
-            ]
-            geo_result = snap_report.verify_geo_only_pair(
-                client, snap_report.GEO_ONLY_TEST_PAIR
-            )
+        fare_results = [
+            snap_report.verify_fare_pair(conn, engine, pair)
+            for pair in snap_report.FARE_TEST_PAIRS
+        ]
+        geo_result = snap_report.verify_geo_only_pair(
+            engine, snap_report.GEO_ONLY_TEST_PAIR
+        )
     finally:
+        engine.close()
         conn.close()
 
     assert len(fare_results) == 4

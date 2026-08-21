@@ -2,19 +2,20 @@ import httpx
 import pytest
 
 from tollroute.etl import coverage_audit
+from tollroute.routing_engine import DEFAULT_FULL_URL
 from tollroute.validation import snap_quality
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_quality.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -35,12 +36,12 @@ def test_run_snaps_all_gates_and_quarantines_over_threshold(full_db):
     conn = full_db
     results, suspects = snap_quality.run(conn)
 
-    # Ground truth (gare_master.csv): 953 of 956 gates carry coordinates.
-    assert len(results) == 953
+    # Ground truth (gare_master.csv): all 973 gates carry coordinates.
+    assert len(results) == 973
     (snapped_count,) = conn.execute(
         "SELECT COUNT(*) FROM gates WHERE snap_distance_m IS NOT NULL"
     ).fetchone()
-    assert snapped_count == 953
+    assert snapped_count == 973
     for r in results:
         assert r.snap_distance_m >= 0
 
@@ -55,5 +56,5 @@ def test_run_is_idempotent_on_rerun(full_db):
     conn = full_db
     snap_quality.run(conn)
     results_2, suspects_2 = snap_quality.run(conn)
-    assert len(results_2) == 953
+    assert len(results_2) == 973
     assert suspects_2 == []

@@ -53,6 +53,7 @@ import pytest
 from tollroute import graph as graph_mod
 from tollroute import routing
 from tollroute.etl import load, snap_report
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 REPORT = "reports/phase1d_pair_validation.md"
 
@@ -78,14 +79,14 @@ PAIR5 = ("5 Beaune->Macon", 96, 494, 74.10, 6.60)
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -102,31 +103,27 @@ def base_graph():
         )
         conn = sqlite3.connect(db_path)
         try:
-            with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-                snap_report.snap_all_gates(conn, client)
+            engine = RoutingEngine()
+            try:
+                snap_report.snap_all_gates(conn, engine)
                 g = graph_mod.build_graph(conn)
+            finally:
+                engine.close()
         finally:
             conn.close()
     return g
 
 
 def _osrm_route(
-    client: httpx.Client,
+    engine: RoutingEngine,
     origin: tuple[float, float],
     destination: tuple[float, float],
     exclude_toll: bool,
     geometry: bool = False,
 ) -> dict:
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
-    params = "overview=full&geometries=geojson" if geometry else "overview=false"
-    if exclude_toll:
-        params += "&exclude=toll"
-    resp = client.get(f"/route/v1/car/{o_lon},{o_lat};{d_lon},{d_lat}?{params}")
-    resp.raise_for_status()
-    data = resp.json()
-    if data["code"] != "Ok":
-        raise RuntimeError(f"OSRM /route failed for {origin}->{destination}: {data}")
+    data = engine.route(origin, destination, toll_free=exclude_toll, geometry=geometry)
+    if data is None:
+        raise RuntimeError(f"No route found for {origin}->{destination}")
     return data["routes"][0]
 
 
@@ -201,8 +198,11 @@ def test_osrm_tolled_distance_within_tolerance(
     """
     o = base_graph.gate_coords[from_id]
     d = base_graph.gate_coords[to_id]
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-        tolled = _osrm_route(client, o, d, exclude_toll=False)
+    engine = RoutingEngine()
+    try:
+        tolled = _osrm_route(engine, o, d, exclude_toll=False)
+    finally:
+        engine.close()
     rel_err = abs(tolled["distance"] - distance_km * 1000.0) / (distance_km * 1000.0)
     assert rel_err <= DISTANCE_TOLERANCE, (
         f"{label}: OSRM {tolled['distance']:.0f} m vs distance_km {distance_km * 1000:.0f} m "
@@ -241,8 +241,11 @@ def test_uturn_overshoot_explains_distance_gap(
     o = base_graph.gate_coords[from_id]
     d = base_graph.gate_coords[to_id]
     dest_lat = d[0]
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-        tolled = _osrm_route(client, o, d, exclude_toll=False, geometry=True)
+    engine = RoutingEngine()
+    try:
+        tolled = _osrm_route(engine, o, d, exclude_toll=False, geometry=True)
+    finally:
+        engine.close()
     min_lat = min(pt[1] for pt in tolled["geometry"]["coordinates"])
     overshoot_m = max(0.0, (dest_lat - min_lat)) * 111_000.0  # deg lat -> m (~111 km/deg)
     corrected_m = tolled["distance"] - 2.0 * overshoot_m
@@ -304,9 +307,12 @@ def test_cheaper_alternative_meets_guardrails(
     """
     o = base_graph.gate_coords[from_id]
     d = base_graph.gate_coords[to_id]
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-        tolled = _osrm_route(client, o, d, exclude_toll=False)
-        toll_free = _osrm_route(client, o, d, exclude_toll=True)
+    engine = RoutingEngine()
+    try:
+        tolled = _osrm_route(engine, o, d, exclude_toll=False)
+        toll_free = _osrm_route(engine, o, d, exclude_toll=True)
+    finally:
+        engine.close()
     extra_km = (toll_free["distance"] - tolled["distance"]) / 1000.0
     extra_min = (toll_free["duration"] - tolled["duration"]) / 60.0
     # The time half of the guard rail genuinely holds for every A6 pair; it is the

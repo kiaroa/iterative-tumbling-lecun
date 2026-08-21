@@ -9,19 +9,19 @@ import httpx
 import pytest
 
 from tollroute.etl import build_national
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
+from tollroute.routing_engine import DEFAULT_FULL_URL
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -41,7 +41,7 @@ def test_national_build_summary_matches_known_disposition_counts(built):
     # disposition, rematch_blank_ids' Phase 2b rematch): 956 raw gates,
     # 57,378 raw fares, 551 zero-price rows split 307 free_section / 6
     # free_transfer / 238 drop, all 326 blank endpoints resolved.
-    assert summary["raw_gate_count"] == 956
+    assert summary["raw_gate_count"] == 973
     assert summary["raw_fare_count"] == 57378
     # +1 vs the raw/zero-price arithmetic below: Phase 5b-follow-up-2's
     # seed_millau_override runs after this module's own raw-count bookkeeping and
@@ -51,8 +51,8 @@ def test_national_build_summary_matches_known_disposition_counts(built):
     assert summary["zero_price_tally"] == {"free_section": 307, "free_transfer": 6, "drop": 238}
     assert summary["rematch_matched"] == 326
     assert summary["rematch_dropped"] == 0
-    assert summary["coordinateless_count"] == 3
-    assert summary["distance_suspect_count"] == 43
+    assert summary["coordinateless_count"] == 0
+    assert summary["distance_suspect_count"] == 1
 
 
 @requires_osrm

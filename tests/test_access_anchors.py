@@ -1,15 +1,18 @@
-import httpx
 import pytest
 
 from tollroute.etl import access_anchors
 
 
 def _geojson_route(points: list[tuple[float, float]]) -> dict:
-    """A minimal OSRM /route Ok response with full geometry through `points` (lat, lon)."""
+    """OSRM-compat route response with geometry through `points` (lat, lon)."""
     return {
         "code": "Ok",
         "routes": [{"geometry": {"coordinates": [[lon, lat] for lat, lon in points]}}],
     }
+
+
+def _plain_route(duration: float, distance: float) -> dict:
+    return {"code": "Ok", "routes": [{"duration": duration, "distance": distance}]}
 
 
 def test_find_anchor_walks_geometry_from_gate_and_stops_at_first_reachable_point():
@@ -31,25 +34,20 @@ def test_find_anchor_walks_geometry_from_gate_and_stops_at_first_reachable_point
     p2 = (48.00000, 2.00200)  # ~149 m cumulative from gate, reachable - expected anchor
     p3 = (48.00000, 2.00500)  # ~372 m cumulative from gate, also reachable but farther
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        url = str(request.url)
-        if request.url.path.startswith("/route/") and "overview=full" in url:
-            # Geometry call: reference -> gate, in that driving order.
-            return httpx.Response(200, json=_geojson_route([reference, p3, p2, p1, gate]))
-        if request.url.path.startswith("/table/"):
-            # Batched reachability call for the bounded points [p1, p2, p3]: only
-            # p2 and p3 are reachable from the reference (source 0).
-            return httpx.Response(200, json={"code": "Ok", "durations": [[None, 120.0, 300.0]]})
-        if request.url.path.startswith("/route/") and "overview=false" in url:
-            # Apron leg: p2 -> gate.
-            return httpx.Response(
-                200, json={"code": "Ok", "routes": [{"duration": 12.5, "distance": 149.0}]}
-            )
-        raise AssertionError(f"unexpected request: {url}")
+    class _MockEngine:
+        def route(self, origin, destination, geometry=False, toll_free=False):
+            if geometry:
+                # geometry call: reference -> gate
+                return _geojson_route([reference, p3, p2, p1, gate])
+            # apron call: p2 -> gate
+            return _plain_route(12.5, 149.0)
 
-    client = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://osrm.test")
+        def one_to_many_table(self, origin, destinations, exclude_toll=False):
+            # Only p2 and p3 reachable from reference; p1 is not.
+            return [None if d == p1 else (120.0, 500.0) for d in destinations]
+
     anchor = access_anchors.find_anchor(
-        client, gare_id=999, direction="entry", gate_point=gate, reference_points=[reference]
+        _MockEngine(), gare_id=999, direction="entry", gate_point=gate, reference_points=[reference]
     )
 
     assert anchor is not None
@@ -70,23 +68,18 @@ def test_find_anchor_exit_direction_walks_gate_to_reference_order():
     p1 = (48.00000, 2.00080)  # NOT reachable
     p2 = (48.00000, 2.00200)  # reachable - expected anchor
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        url = str(request.url)
-        if request.url.path.startswith("/route/") and "overview=full" in url:
-            # Geometry call: gate -> reference, in that driving order.
-            return httpx.Response(200, json=_geojson_route([gate, p1, p2, reference]))
-        if request.url.path.startswith("/table/"):
-            return httpx.Response(200, json={"code": "Ok", "durations": [[None], [90.0]]})
-        if request.url.path.startswith("/route/") and "overview=false" in url:
-            # Apron leg: gate -> p2.
-            return httpx.Response(
-                200, json={"code": "Ok", "routes": [{"duration": 11.0, "distance": 149.0}]}
-            )
-        raise AssertionError(f"unexpected request: {url}")
+    class _MockEngine:
+        def route(self, origin, destination, geometry=False, toll_free=False):
+            if geometry:
+                return _geojson_route([gate, p1, p2, reference])
+            # apron call: gate -> p2
+            return _plain_route(11.0, 149.0)
 
-    client = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://osrm.test")
+        def many_to_one_table(self, sources, destination, exclude_toll=False):
+            return [None if s == p1 else (90.0, 200.0) for s in sources]
+
     anchor = access_anchors.find_anchor(
-        client, gare_id=999, direction="exit", gate_point=gate, reference_points=[reference]
+        _MockEngine(), gare_id=999, direction="exit", gate_point=gate, reference_points=[reference]
     )
 
     assert anchor is not None
@@ -102,17 +95,15 @@ def test_find_anchor_returns_none_when_no_candidate_clears_the_pocket():
     reference = (50.00000, 3.00000)
     p1 = (48.00000, 2.00080)
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        url = str(request.url)
-        if request.url.path.startswith("/route/") and "overview=full" in url:
-            return httpx.Response(200, json=_geojson_route([reference, p1, gate]))
-        if request.url.path.startswith("/table/"):
-            return httpx.Response(200, json={"code": "Ok", "durations": [[None]]})
-        raise AssertionError(f"unexpected request: {url}")
+    class _MockEngine:
+        def route(self, origin, destination, geometry=False, toll_free=False):
+            return _geojson_route([reference, p1, gate])
 
-    client = httpx.Client(transport=httpx.MockTransport(handler), base_url="http://osrm.test")
+        def one_to_many_table(self, origin, destinations, exclude_toll=False):
+            return [None for _ in destinations]
+
     anchor = access_anchors.find_anchor(
-        client, gare_id=999, direction="entry", gate_point=gate, reference_points=[reference]
+        _MockEngine(), gare_id=999, direction="entry", gate_point=gate, reference_points=[reference]
     )
 
     assert anchor is None

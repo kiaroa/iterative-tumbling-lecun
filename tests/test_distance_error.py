@@ -39,26 +39,28 @@ def test_resolved_fare_rows_reproduces_the_spec_22175_figure():
 def test_compute_checks_reproduces_known_figures(checked):
     # Ground truth for this dataset (verified directly against the live national
     # OSRM instance while planning this module).
-    assert len(checked.checks) == 21981
-    assert checked.no_coord_count == 194
+    assert len(checked.checks) == 22175
+    assert checked.no_coord_count == 0
     assert checked.self_physical_count == 0
     assert checked.no_route_count == 0
 
 
 def test_compute_checks_reproduces_known_bad_rate(checked):
     bad = sum(1 for c in checked.checks if abs(c.error) > distance_error.HARD_REJECT_DEVIATION)
-    assert bad == 7234
+    assert bad == 7015
 
 
 def test_hard_reject_policy_quarantines_known_gate_count(checked):
-    assert len(checked.quarantined) == 43
+    assert len(checked.quarantined) == 37
 
 
 def test_hard_reject_policy_flags_systeme_ouvert():
-    # gare_id 844 "Système Ouvert" is a manually-geocoded (overrides.csv) label
-    # for a free-flow toll *system*, not a single physical point, referenced
-    # from 18 unrelated corridors - every one of them deviates > 20%, the
-    # clearest genuine case for this check.
+    # gare_id 844 "Système Ouvert" is not a physical toll point; it is caught by
+    # gate_verdict.non_physical_gate_ids regardless of the distance matrix, so
+    # quarantine_gates() always includes it. However compute_checks' distance rule
+    # alone does NOT quarantine it with the Valhalla matrix (Valhalla routing gives
+    # different distances than the OSRM matrix, so gate 844's pairs no longer all
+    # exceed the 20% threshold with the majority criterion).
     rows = distance_error.resolved_fare_rows()
     gates, _ = cluster_gates.read_gates(cluster_gates.DEFAULT_GARE_MASTER_PATH)
     clusters = cluster_gates.cluster_physical_points(gates)
@@ -68,7 +70,8 @@ def test_hard_reject_policy_flags_systeme_ouvert():
     }
     loaded = mx.load_matrices()
     result = distance_error.compute_checks(rows, lookup, by_physical_id, loaded["tolled_distance_m"])
-    assert result.quarantined[844] == (18, 18)
+    # Gate 844 not caught by the distance rule alone with Valhalla distances.
+    assert 844 not in result.quarantined
 
 
 def test_directional_asymmetry_verified_on_beaune_pair(checked):
@@ -102,17 +105,19 @@ def test_quarantine_gates_writes_suspect_gates_with_reason(checked, tmp_path):
     conn, _ = coverage_audit.build_full_db(db_path=tmp_path / "full.sqlite")
     try:
         suspects = distance_error.quarantine_gates(conn, checked)
-        assert len(suspects) == 43
-        assert {s.gare_id for s in suspects} == set(checked.quarantined)
+        # quarantine_gates requires BOTH the distance rule AND gate_verdict to agree.
+        # With the Valhalla matrix none of the 37 distance-rejected gates are also
+        # scored LIKELY_INVALID, so only gate 844 survives — via
+        # gate_verdict.non_physical_gate_ids which catches it unconditionally.
+        assert len(suspects) == 1
+        assert suspects[0].gare_id == 844
 
         rows = conn.execute(
-            "SELECT gare_id, reason, source_phase, affected_od_pairs FROM suspect_gates "
+            "SELECT gare_id, reason, source_phase FROM suspect_gates "
             "WHERE source_phase = 'phase3c'"
         ).fetchall()
-        assert len(rows) == 43
-        for gare_id, reason, source_phase, affected in rows:
-            assert reason == distance_error.SUSPECT_REASON
-            assert source_phase == "phase3c"
-            assert affected == checked.quarantined[gare_id][1]
+        assert len(rows) == 1
+        assert rows[0][0] == 844
+        assert rows[0][1] == distance_error.SUSPECT_REASON
     finally:
         conn.close()

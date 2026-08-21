@@ -5,19 +5,20 @@
 import httpx
 import pytest
 
+from tollroute.routing_engine import DEFAULT_FULL_URL
 from tollroute.validation import phase3c
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{phase3c.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 

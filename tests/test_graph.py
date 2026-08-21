@@ -6,18 +6,19 @@ import pytest
 from tollroute import graph as graph_mod
 from tollroute import routing
 from tollroute.etl import coverage_audit, freeflow, load, snap_report
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -35,9 +36,12 @@ def built_graph():
         )
         conn = sqlite3.connect(db_path)
         try:
-            with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-                snap_report.snap_all_gates(conn, client)
+            engine = RoutingEngine()
+            try:
+                snap_report.snap_all_gates(conn, engine)
                 g = graph_mod.build_graph(conn)
+            finally:
+                engine.close()
         finally:
             conn.close()
     return g
@@ -79,8 +83,11 @@ def national_built_graph():
         db_path = Path(tmp) / "tollroute_full.sqlite"
         conn, _ = coverage_audit.build_full_db(db_path=db_path)
         try:
-            with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-                snap_report.snap_all_gates(conn, client)
+            engine = RoutingEngine()
+            try:
+                snap_report.snap_all_gates(conn, engine)
+            finally:
+                engine.close()
             g = graph_mod.build_graph(conn)
         finally:
             conn.close()

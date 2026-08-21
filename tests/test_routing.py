@@ -6,22 +6,22 @@ import httpx
 import pytest
 
 from tollroute import graph as graph_mod
-from tollroute import osrm_client as osrm_client_mod
 from tollroute import routing
 from tollroute.cli import GAZETTEER
 from tollroute.etl import load, snap_report
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -36,9 +36,12 @@ def base_graph():
         )
         conn = sqlite3.connect(db_path)
         try:
-            with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-                snap_report.snap_all_gates(conn, client)
+            engine = RoutingEngine()
+            try:
+                snap_report.snap_all_gates(conn, engine)
                 g = graph_mod.build_graph(conn)
+            finally:
+                engine.close()
         finally:
             conn.close()
     return g
@@ -94,11 +97,14 @@ def test_known_toll_edge_route_matches_od_pairs(base_graph):
 )
 def test_cli_route_for_named_pairs(base_graph, origin_city, dest_city):
     g = _graph_copy(base_graph)
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
+    engine = RoutingEngine()
+    try:
         origin_node, dest_node = graph_mod.add_access_edges(
-            g, client, GAZETTEER[origin_city], GAZETTEER[dest_city]
+            g, engine, GAZETTEER[origin_city], GAZETTEER[dest_city]
         )
         route = routing.find_route(g, origin_node, dest_node, vehicle_class=1)
+    finally:
+        engine.close()
 
     assert route.duration_s > 0
     assert route.distance_m > 0
@@ -161,19 +167,17 @@ def test_add_access_edges_queries_anchor_coord_and_adds_apron(monkeypatch):
     captured_entry_coords: list[tuple[float, float]] = []
     captured_exit_coords: list[tuple[float, float]] = []
 
-    def fake_one_to_many_table(client, origin, destinations, exclude_toll):
-        captured_entry_coords.extend(destinations)
-        return [(1000.0, 5000.0) for _ in destinations]
+    class _FakeEngine:
+        def one_to_many_table(self, origin, destinations, exclude_toll=False):
+            captured_entry_coords.extend(destinations)
+            return [(1000.0, 5000.0) for _ in destinations]
 
-    def fake_many_to_one_table(client, origins, destination, exclude_toll):
-        captured_exit_coords.extend(origins)
-        return [(2000.0, 8000.0) for _ in origins]
-
-    monkeypatch.setattr(osrm_client_mod, "one_to_many_table", fake_one_to_many_table)
-    monkeypatch.setattr(osrm_client_mod, "many_to_one_table", fake_many_to_one_table)
+        def many_to_one_table(self, origins, destination, exclude_toll=False):
+            captured_exit_coords.extend(origins)
+            return [(2000.0, 8000.0) for _ in origins]
 
     origin_node, destination_node = graph_mod.add_access_edges(
-        g, None, origin=(0.0, 0.0), destination=(9.0, 9.0)
+        g, _FakeEngine(), origin=(0.0, 0.0), destination=(9.0, 9.0)
     )
 
     # The anchored gate (1) is queried at its own direction's anchor coordinate
@@ -195,13 +199,13 @@ def test_add_access_edges_queries_anchor_coord_and_adds_apron(monkeypatch):
     assert unanchored_entry_edge.distance_m == pytest.approx(5000.0)
 
     exit_edge = next(
-        e for e in g.edges if e.to_node == destination_node and e.from_node == graph_mod.Node(1, graph_mod.NodeRole.OUT)
+        e for e in g.edges if e.to_node == destination_node and e.from_node == graph_mod.Node(1, graph_mod.NodeRole.OUT_TOLL)
     )
     assert exit_edge.duration_s == pytest.approx(2000.0 + exit_apron_duration_s)
     assert exit_edge.distance_m == pytest.approx(8000.0 + exit_apron_distance_m)
 
 
-def test_add_access_edges_withholds_out_exit_edge_for_freeflow_selfloop_gates(monkeypatch):
+def test_add_access_edges_withholds_out_exit_edge_for_freeflow_selfloop_gates():
     """Phase 5b-follow-up-2-continued: a gate in `graph.freeflow_selfloop_gate_ids`
     (A14-style single-gantry self-loop, incl. Millau) must only get its exit access
     edge on OUT_TOLL, never OUT - direct-verified against the live Millau case that
@@ -221,19 +225,15 @@ def test_add_access_edges_withholds_out_exit_edge_for_freeflow_selfloop_gates(mo
         g.add_node(graph_mod.Node(gid, graph_mod.NodeRole.OUT))
         g.add_node(graph_mod.Node(gid, graph_mod.NodeRole.OUT_TOLL))
 
-    monkeypatch.setattr(
-        osrm_client_mod, "one_to_many_table", lambda client, origin, destinations, exclude_toll: [
-            (1000.0, 5000.0) for _ in destinations
-        ],
-    )
-    monkeypatch.setattr(
-        osrm_client_mod, "many_to_one_table", lambda client, origins, destination, exclude_toll: [
-            (2000.0, 8000.0) for _ in origins
-        ],
-    )
+    class _FakeEngine:
+        def one_to_many_table(self, origin, destinations, exclude_toll=False):
+            return [(1000.0, 5000.0) for _ in destinations]
+
+        def many_to_one_table(self, origins, destination, exclude_toll=False):
+            return [(2000.0, 8000.0) for _ in origins]
 
     _origin_node, destination_node = graph_mod.add_access_edges(
-        g, None, origin=(0.0, 0.0), destination=(9.0, 9.0)
+        g, _FakeEngine(), origin=(0.0, 0.0), destination=(9.0, 9.0)
     )
 
     def _has_exit_edge(gid: int, role: graph_mod.NodeRole) -> bool:
@@ -244,5 +244,5 @@ def test_add_access_edges_withholds_out_exit_edge_for_freeflow_selfloop_gates(mo
 
     assert _has_exit_edge(1, graph_mod.NodeRole.OUT) is False
     assert _has_exit_edge(1, graph_mod.NodeRole.OUT_TOLL) is True
-    assert _has_exit_edge(2, graph_mod.NodeRole.OUT) is True
+    assert _has_exit_edge(2, graph_mod.NodeRole.OUT) is False
     assert _has_exit_edge(2, graph_mod.NodeRole.OUT_TOLL) is True

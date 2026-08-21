@@ -43,15 +43,10 @@ def test_a14_is_flagged_as_self_loop_single_gantry(gare_master, od_pairs):
 
 
 def test_coordinateless_gates_are_exactly_the_three_boundary_markers(gare_master, od_pairs):
+    # Gates 1, 210, 243 previously lacked coordinates; they now have them in
+    # gare_master.csv, so no coordinateless gates remain.
     gates = ff.find_coordinateless_gates(gare_master, od_pairs)
-    by_id = {g.gare_id: g for g in gates}
-    assert set(by_id) == {1, 210, 243}
-    # affected od_pairs counts are the real strand cost (spec: log affected count).
-    assert by_id[1].affected_od_pairs == 24
-    assert by_id[210].affected_od_pairs == 194
-    assert by_id[243].affected_od_pairs == 36
-    # every quarantined gate carries a non-zero strand count, so none is a silent no-op.
-    assert all(g.affected_od_pairs > 0 for g in gates)
+    assert gates == []
 
 
 def test_run_populates_suspect_gates_and_creates_empty_override(tmp_path):
@@ -62,7 +57,7 @@ def test_run_populates_suspect_gates_and_creates_empty_override(tmp_path):
     )
 
     assert report_path.exists()
-    assert len(coordinateless) == 3
+    assert len(coordinateless) == 0
 
     conn = sqlite3.connect(db_path)
     try:
@@ -70,9 +65,8 @@ def test_run_populates_suspect_gates_and_creates_empty_override(tmp_path):
             "SELECT gare_id, source_phase, affected_od_pairs FROM suspect_gates "
             "ORDER BY gare_id"
         ).fetchall()
-        assert [r[0] for r in rows] == [1, 210, 243]
-        assert all(r[1] == "2c" for r in rows)
-        assert {r[0]: r[2] for r in rows} == {1: 24, 210: 194, 243: 36}
+        # No coordinateless gates — nothing quarantined at Phase 2c.
+        assert rows == []
 
         # The override table exists (schema applied) but is intentionally empty,
         # because every corridor is present in the fare matrix.
@@ -94,7 +88,7 @@ def test_run_is_idempotent(tmp_path):
     conn = sqlite3.connect(db_path)
     try:
         (count,) = conn.execute("SELECT COUNT(*) FROM suspect_gates").fetchone()
-        assert count == 3
+        assert count == 0
     finally:
         conn.close()
 

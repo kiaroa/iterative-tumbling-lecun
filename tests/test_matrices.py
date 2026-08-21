@@ -4,18 +4,19 @@ import pytest
 
 from tollroute import matrices
 from tollroute.etl import cluster_gates
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 
-def _osrm_reachable() -> bool:
+def _valhalla_reachable() -> bool:
     try:
-        httpx.get(f"{matrices.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _valhalla_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -25,23 +26,28 @@ def _cluster(physical_gate_id: int, lat: float, lon: float) -> cluster_gates.Phy
     )
 
 
-def _mock_table_client(n: int, missing: set[tuple[int, int]] | None = None) -> httpx.Client:
-    """Deterministic n x n table: duration = 100*(i+j+1), distance = 1000*(i+j+1),
-    except cells in `missing` which OSRM reports as null (no route).
+class _MockEngine:
+    """Deterministic mock RoutingEngine: duration = 100*(i+j+1), distance = 1000*(i+j+1),
+    except cells in `missing` (row_index, col_index) which return None (no route).
     """
-    missing = missing or set()
 
-    def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.path.startswith("/table/v1/car/")
-        params = dict(p.split("=") for p in request.url.query.decode().split("&"))
-        sources = [int(x) for x in params["sources"].split(";")]
-        destinations = [int(x) for x in params["destinations"].split(";")]
-        durations = []
-        distances = []
-        for i in sources:
-            drow, distrow = [], []
-            for j in destinations:
-                if (i, j) in missing:
+    def __init__(self, missing: set[tuple[int, int]] | None = None):
+        self._missing = missing or set()
+
+    def close(self) -> None:
+        pass
+
+    def table(
+        self, coords: list, toll_free: bool = False
+    ) -> tuple[list[list], list[list]]:
+        n = len(coords)
+        durations: list[list] = []
+        distances: list[list] = []
+        for i in range(n):
+            drow: list = []
+            distrow: list = []
+            for j in range(n):
+                if (i, j) in self._missing:
                     drow.append(None)
                     distrow.append(None)
                 else:
@@ -49,15 +55,30 @@ def _mock_table_client(n: int, missing: set[tuple[int, int]] | None = None) -> h
                     distrow.append(1000.0 * (i + j + 1))
             durations.append(drow)
             distances.append(distrow)
-        return httpx.Response(200, json={"code": "Ok", "durations": durations, "distances": distances})
+        return durations, distances
 
-    return httpx.Client(base_url="http://osrm.test", transport=httpx.MockTransport(handler))
+    def asymmetric_table(
+        self, source_coords: list, dest_coords: list, toll_free: bool = False
+    ) -> tuple[list[list], list[list]]:
+        m = len(source_coords)
+        n = len(dest_coords)
+        durations: list[list] = []
+        distances: list[list] = []
+        for i in range(m):
+            drow: list = []
+            distrow: list = []
+            for j in range(n):
+                drow.append(100.0 * (i + j + 1))
+                distrow.append(1000.0 * (i + j + 1))
+            durations.append(drow)
+            distances.append(distrow)
+        return durations, distances
 
 
 def test_compute_matrices_shapes_and_values():
     clusters = [_cluster(1, 48.0, 2.0), _cluster(2, 48.1, 2.1), _cluster(3, 48.2, 2.2)]
-    with _mock_table_client(3, missing={(0, 2)}) as client:
-        result = matrices.compute_matrices(clusters, client)
+    engine = _MockEngine(missing={(0, 2)})
+    result = matrices.compute_matrices(clusters, engine)
 
     assert set(result) == set(matrices.MATRIX_NAMES)
     for name in matrices.MATRIX_NAMES:
@@ -72,8 +93,8 @@ def test_compute_matrices_shapes_and_values():
 
 def test_save_and_load_matrices_round_trip(tmp_path):
     clusters = [_cluster(1, 48.0, 2.0), _cluster(2, 48.1, 2.1)]
-    with _mock_table_client(2) as client:
-        built = matrices.compute_matrices(clusters, client)
+    engine = _MockEngine()
+    built = matrices.compute_matrices(clusters, engine)
     matrices.save_matrices(built, tmp_path)
 
     loaded = matrices.load_matrices(tmp_path)
@@ -99,10 +120,8 @@ def test_load_matrices_corrupt_file_fails_fast(tmp_path):
 def test_load_matrices_shape_mismatch_fails_fast(tmp_path):
     clusters2 = [_cluster(1, 48.0, 2.0), _cluster(2, 48.1, 2.1)]
     clusters3 = [_cluster(1, 48.0, 2.0), _cluster(2, 48.1, 2.1), _cluster(3, 48.2, 2.2)]
-    with _mock_table_client(2) as client:
-        two_by_two = matrices.compute_matrices(clusters2, client)
-    with _mock_table_client(3) as client:
-        three_by_three = matrices.compute_matrices(clusters3, client)
+    two_by_two = matrices.compute_matrices(clusters2, _MockEngine())
+    three_by_three = matrices.compute_matrices(clusters3, _MockEngine())
 
     tmp_path.mkdir(exist_ok=True)
     for name in matrices.MATRIX_NAMES[:1]:
@@ -116,8 +135,7 @@ def test_load_matrices_shape_mismatch_fails_fast(tmp_path):
 
 def test_spot_check_sample_size_and_no_diagonal():
     clusters = [_cluster(i, 48.0 + i * 0.01, 2.0 + i * 0.01) for i in range(5)]
-    with _mock_table_client(5) as client:
-        built = matrices.compute_matrices(clusters, client)
+    built = matrices.compute_matrices(clusters, _MockEngine())
 
     checks = matrices.spot_check(built, clusters, sample_size=10, seed=1)
     assert len(checks) == 10
@@ -127,19 +145,22 @@ def test_spot_check_sample_size_and_no_diagonal():
 
 def test_physical_gate_points_matches_cluster_gates_count():
     clusters = matrices.physical_gate_points()
-    assert len(clusters) == 815
+    assert len(clusters) == 835
     assert [c.physical_gate_id for c in clusters] == sorted(c.physical_gate_id for c in clusters)
 
 
 @requires_osrm
-def test_run_against_live_osrm_produces_loadable_matrices(tmp_path):
+def test_run_against_live_valhalla_produces_loadable_matrices(tmp_path):
     """Small end-to-end smoke test against a handful of real gates (not the
     full 815 - that's the module's __main__ / phase report run), confirming
-    the live OSRM /table wiring and the save->load round trip both work.
+    the live Valhalla /sources_to_targets wiring and save->load round trip both work.
     """
     clusters = matrices.physical_gate_points()[:5]
-    with httpx.Client(base_url=matrices.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-        built = matrices.compute_matrices(clusters, client)
+    engine = RoutingEngine()
+    try:
+        built = matrices.compute_matrices(clusters, engine)
+    finally:
+        engine.close()
     matrices.save_matrices(built, tmp_path)
     loaded = matrices.load_matrices(tmp_path)
     for name in matrices.MATRIX_NAMES:

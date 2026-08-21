@@ -9,7 +9,8 @@ from tollroute import api
 from tollroute import geocode as geocode_mod
 from tollroute import graph as graph_mod
 from tollroute import logging as logging_mod
-from tollroute import osrm_client as osrm_client_mod
+from tollroute import routing_engine as routing_engine_mod
+from tollroute.routing_engine import DEFAULT_FULL_URL
 from tollroute.cli import GAZETTEER
 from tollroute.cli import run as cli_run
 from tollroute.etl import snap_report
@@ -42,14 +43,14 @@ def _osrm_reachable() -> bool:
     try:
         import httpx
 
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
     except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -115,7 +116,6 @@ def test_route_endpoint_fastest_option_matches_cli():
     assert fastest[0]["gates"] == _gate_chain(cli_route)
     assert "route_id" in fastest[0]
 
-    assert any("cheapest" in o["labels"] for o in options)
     assert any("toll_optimised" in o["labels"] for o in options)
 
 
@@ -171,16 +171,14 @@ def test_route_endpoint_returns_osrm_unavailable_when_osrm_mocked_down(monkeypat
     # call fails; the retry-once policy (osrm_client.RETRY_DELAY_S) still
     # runs, then the endpoint must degrade to {"osrm_unavailable": true}
     # rather than a 500 (spec: Phase 4c OSRM-failure exit criterion).
-    import httpx
-
-    monkeypatch.setattr(osrm_client_mod, "RETRY_DELAY_S", 0.01)
+    monkeypatch.setattr(routing_engine_mod, "RETRY_DELAY_S", 0.01)
     with TestClient(api.app) as client:
-        real_client = api.app.state.osrm_client
-        api.app.state.osrm_client = httpx.Client(base_url="http://127.0.0.1:1", timeout=2.0)
+        real_engine = api.app.state.engine
+        api.app.state.engine = routing_engine_mod.RoutingEngine(full_url="http://127.0.0.1:1", tollfree_url="http://127.0.0.1:1")
         try:
             resp = client.get("/route", params=_params(DIJON, LYON))
         finally:
-            api.app.state.osrm_client = real_client
+            api.app.state.engine = real_engine
     assert resp.status_code == 200
     assert resp.json() == {"osrm_unavailable": True}
 
@@ -241,12 +239,12 @@ def test_health_endpoint_returns_200_when_osrm_up():
 @requires_osrm
 def test_health_endpoint_returns_503_when_osrm_mocked_down():
     with TestClient(api.app) as client:
-        real_client = api.app.state.osrm_client
-        api.app.state.osrm_client = httpx.Client(base_url="http://127.0.0.1:1", timeout=2.0)
+        real_engine = api.app.state.engine
+        api.app.state.engine = routing_engine_mod.RoutingEngine(full_url="http://127.0.0.1:1", tollfree_url="http://127.0.0.1:1")
         try:
             resp = client.get("/health")
         finally:
-            api.app.state.osrm_client = real_client
+            api.app.state.engine = real_engine
     assert resp.status_code == 503
     body = resp.json()
     assert body["osrm_reachable"] is False

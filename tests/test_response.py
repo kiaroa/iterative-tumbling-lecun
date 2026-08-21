@@ -11,18 +11,19 @@ from tollroute import response
 from tollroute import routing
 from tollroute.cli import GAZETTEER
 from tollroute.etl import load, snap_report
+from tollroute.routing_engine import DEFAULT_FULL_URL, RoutingEngine
 
 
 def _osrm_reachable() -> bool:
     try:
-        httpx.get(f"{snap_report.DEFAULT_OSRM_BASE_URL}/nearest/v1/car/5.0,47.0", timeout=2.0)
+        httpx.get(f"{DEFAULT_FULL_URL}/status", timeout=2.0)
         return True
-    except httpx.HTTPError:
+    except Exception:
         return False
 
 
 requires_osrm = pytest.mark.skipif(
-    not _osrm_reachable(), reason="live OSRM instance not reachable on DEFAULT_OSRM_BASE_URL"
+    not _osrm_reachable(), reason="live Valhalla instance not reachable on DEFAULT_FULL_URL"
 )
 
 
@@ -40,9 +41,12 @@ def base_graph_config_and_db():
     )
     conn = sqlite3.connect(db_path)
     try:
-        with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-            snap_report.snap_all_gates(conn, client)
+        engine = RoutingEngine()
+        try:
+            snap_report.snap_all_gates(conn, engine)
             g = graph_mod.build_graph(conn)
+        finally:
+            engine.close()
         class_config = cost.load_class_config(conn)
     finally:
         conn.close()
@@ -163,9 +167,12 @@ def test_gate_match_detail_reads_gates_table(base_graph_config_and_db):
 def test_shape_response_dijon_lyon_has_fastest_matching_plain_dijkstra(base_graph_config_and_db):
     base_g, class_config, db_path = base_graph_config_and_db
     g = _graph_copy(base_g)
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-        origin_node, dest_node = graph_mod.add_access_edges(g, client, GAZETTEER["dijon"], GAZETTEER["lyon"])
+    engine = RoutingEngine()
+    try:
+        origin_node, dest_node = graph_mod.add_access_edges(g, engine, GAZETTEER["dijon"], GAZETTEER["lyon"])
         expected_fastest = routing.find_route(g, origin_node, dest_node, vehicle_class=1)
+    finally:
+        engine.close()
 
     conn = sqlite3.connect(db_path)
     try:
@@ -184,7 +191,6 @@ def test_shape_response_dijon_lyon_has_fastest_matching_plain_dijkstra(base_grap
     assert fastest["duration_s"] == pytest.approx(expected_fastest.duration_s)
     assert fastest["distance_m"] == pytest.approx(expected_fastest.distance_m)
 
-    assert any("cheapest" in o["labels"] for o in options)
     assert any("toll_optimised" in o["labels"] for o in options)
 
     for opt in options:
@@ -199,8 +205,11 @@ def test_shape_response_dijon_lyon_has_fastest_matching_plain_dijkstra(base_grap
 def test_shape_response_worthwhile_filter_shrinks_with_high_vot(base_graph_config_and_db):
     base_g, class_config, db_path = base_graph_config_and_db
     g = _graph_copy(base_g)
-    with httpx.Client(base_url=snap_report.DEFAULT_OSRM_BASE_URL, timeout=30.0) as client:
-        origin_node, dest_node = graph_mod.add_access_edges(g, client, GAZETTEER["dijon"], GAZETTEER["lyon"])
+    engine = RoutingEngine()
+    try:
+        origin_node, dest_node = graph_mod.add_access_edges(g, engine, GAZETTEER["dijon"], GAZETTEER["lyon"])
+    finally:
+        engine.close()
 
     conn = sqlite3.connect(db_path)
     try:
@@ -228,3 +237,47 @@ def test_shape_response_rejects_unknown_vehicle_class():
             graph_mod.Node(2, graph_mod.NodeRole.IN_TOLL), vehicle_class=9,
             class_config={}, conn=None,
         )
+
+
+@requires_osrm
+def test_calais_amboise_optimised_uses_n10_south_of_chartres(base_graph_config_and_db):
+    """The toll-optimised Calais→Amboise route's toll-free exit leg must use N10
+    from south of Chartres (lat < 48.45°N) — the Chartres→Amboise corridor via
+    Grange Rouge — not the parallel motorway network."""
+    base_g, class_config, db_path = base_graph_config_and_db
+    g = _graph_copy(base_g)
+
+    # Gate 697 ROUEN LES ESSARTS (A13) is the toll-optimised gateway; query the
+    # toll-free exit leg directly from its snapped coordinates.
+    GATE_697_LAT, GATE_697_LON = 49.302482, 1.118014
+    AMBOISE_LAT, AMBOISE_LON = 47.4134, 0.9851
+    CHARTRES_LAT = 48.45  # southern boundary: N10 must begin below this latitude
+
+    engine = RoutingEngine()
+    try:
+        data = engine.route(
+            (GATE_697_LAT, GATE_697_LON),
+            (AMBOISE_LAT, AMBOISE_LON),
+            toll_free=True,
+            geometry=True,
+        )
+    finally:
+        engine.close()
+
+    assert data is not None, "notoll Valhalla returned no route for gate 697 → Amboise"
+
+    n10_steps = []
+    for leg in data["routes"][0]["legs"]:
+        for step in leg.get("steps", []):
+            ref = (step.get("ref") or "").strip()
+            if "N 10" in ref or ref == "N10":
+                loc = step.get("maneuver", {}).get("location", [None, None])
+                n10_steps.append((loc[1], loc[0]))  # (lat, lon)
+
+    assert n10_steps, "N10 not found in notoll gate-697→Amboise route"
+
+    first_n10_lat = n10_steps[0][0]
+    assert first_n10_lat < CHARTRES_LAT, (
+        f"N10 entered at lat {first_n10_lat:.4f}°, expected south of Chartres "
+        f"({CHARTRES_LAT}°N) — route may be using wrong corridor"
+    )

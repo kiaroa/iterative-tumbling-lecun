@@ -24,7 +24,7 @@ def test_national_build_clean_zero_unresolved(full_db):
     # Ground truth (IMPLEMENTATION_PLAN.md): 956 gates, 57,378 fares,
     # 163 blank from + 163 blank to; and — the Phase 2d exit criterion — zero
     # unresolved (resolved-but-missing) gate references.
-    assert build.gate_count == 956
+    assert build.gate_count == 973
     assert build.fare_count == 57378
     assert build.blank_from == 163
     assert build.blank_to == 163
@@ -42,8 +42,8 @@ def test_coverage_reproduces_known_operator_figures(full_db):
     assert len(coverage) == 13
     # APRR ground truth from prior phases.
     assert coverage["APRR"].rows == 21349
-    assert coverage["APRR"].gates == 176
-    assert coverage["APRR"].dense == 176 * 175
+    assert coverage["APRR"].gates == 188
+    assert coverage["APRR"].dense == 188 * 187
     # aliea is the standout near-empty matrix and must be flagged.
     assert coverage["aliea"].rows == 365
     assert coverage["aliea"].gates == 171

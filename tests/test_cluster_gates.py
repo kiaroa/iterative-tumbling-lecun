@@ -97,17 +97,17 @@ def test_full_dataset_yields_815_physical_points_and_pinned_edge_tallies():
     # Pinned to the spec's ground-truth figure (953 geocoded gates -> 815
     # distinct physical points) and the transfer-edge tallies computed against
     # the current data files. A change here should be a deliberate re-review.
-    assert len(gates) == 953
-    assert len(coordinateless) == 3
-    assert len(clusters) == 815
+    assert len(gates) == 973
+    assert len(coordinateless) == 0
+    assert len(clusters) == 835
 
     from collections import Counter
 
     by_type = Counter(e.transfer_type.value for e in edges)
-    assert dict(by_type) == {"boundary": 110, "exit_reentry": 71}
+    assert dict(by_type) == {"boundary": 111, "exit_reentry": 73}
 
     lookup = cg.build_lookup(clusters)
-    assert len(lookup) == 953
+    assert len(lookup) == 973
 
 
 def test_ablis_cross_operator_boundary_is_verified():
@@ -131,8 +131,8 @@ def test_run_writes_report_and_returns_lookup(tmp_path):
 
     assert report_path.exists()
     report = report_path.read_text()
-    assert "815 physical points" in report or "**815 physical points**" in report
+    assert "835 physical points" in report or "**835 physical points**" in report
     assert "boundary" in report and "exit_reentry" in report
     assert "ABLIS" in report
-    assert len(clusters) == 815
-    assert len(lookup) == 953
+    assert len(clusters) == 835
+    assert len(lookup) == 973
