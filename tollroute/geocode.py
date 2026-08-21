@@ -28,18 +28,24 @@ class GeocodeError(Exception):
     answered but found no matching address."""
 
 
-def geocode(client: httpx.Client, query: str) -> tuple[float, float]:
-    """Resolve free text to (lat, lon), retrying once on transport failure
-    (the same one-retry-at-500ms policy `tollroute.osrm_client` uses for the
-    other external call on the `/route` path). Returns the BAN API's
-    top-scored match; raises `GeocodeError` if the service stays
-    unreachable after the retry or returns no candidates for `query`.
+def geocode(
+    client: httpx.Client, query: str, type: str | None = None
+) -> tuple[float, float]:
+    """Resolve free text to (lat, lon), retrying once on transport failure.
+
+    `type` is passed straight to the BAN `/search/` `type` param when given:
+    pass ``"municipality"`` for city-name lookups to avoid matching streets or
+    hamlets named after the target city in a different département.
     """
+    params: dict[str, str | int] = {"q": query, "limit": 1}
+    if type is not None:
+        params["type"] = type
+
     last_exc: Exception | None = None
     data: dict | None = None
     for attempt in range(2):
         try:
-            resp = client.get("/search/", params={"q": query, "limit": 1})
+            resp = client.get("/search/", params=params)
             resp.raise_for_status()
             data = resp.json()
             break

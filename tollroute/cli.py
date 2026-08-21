@@ -14,6 +14,9 @@ import logging
 import sqlite3
 from pathlib import Path
 
+import httpx
+
+from tollroute import geocode as geocode_mod
 from tollroute import graph as graph_mod
 from tollroute import routing
 from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH as DEFAULT_DB_PATH
@@ -45,12 +48,17 @@ def _normalise(name: str) -> str:
     return name.strip().lower()
 
 
-def resolve_city(name: str) -> tuple[float, float]:
+def resolve_city(name: str, geocode_client: httpx.Client | None = None) -> tuple[float, float]:
     key = _normalise(name)
-    if key not in GAZETTEER:
-        known = ", ".join(sorted(GAZETTEER))
-        raise SystemExit(f"unknown city {name!r}; known cities: {known}")
-    return GAZETTEER[key]
+    if key in GAZETTEER:
+        return GAZETTEER[key]
+    if geocode_client is not None:
+        try:
+            return geocode_mod.geocode(geocode_client, name, type="municipality")
+        except geocode_mod.GeocodeError as exc:
+            raise SystemExit(f"cannot geocode {name!r}: {exc}") from exc
+    known = ", ".join(sorted(GAZETTEER))
+    raise SystemExit(f"unknown city {name!r}; known cities: {known}")
 
 
 def run(
@@ -59,9 +67,10 @@ def run(
     vehicle_class: int,
     db_path: Path = DEFAULT_DB_PATH,
     engine: RoutingEngine | None = None,
+    geocode_client: httpx.Client | None = None,
 ) -> routing.Route:
-    origin_coords = resolve_city(origin_name)
-    dest_coords = resolve_city(dest_name)
+    origin_coords = resolve_city(origin_name, geocode_client)
+    dest_coords = resolve_city(dest_name, geocode_client)
 
     own_engine = engine is None
     if own_engine:
@@ -109,10 +118,15 @@ def main() -> None:
     args = parser.parse_args()
 
     engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    geocode_client = httpx.Client(base_url=geocode_mod.DEFAULT_GEOCODE_BASE_URL, timeout=10.0)
     try:
-        route = run(args.origin, args.destination, args.vehicle_class, args.db, engine=engine)
+        route = run(
+            args.origin, args.destination, args.vehicle_class, args.db,
+            engine=engine, geocode_client=geocode_client,
+        )
     finally:
         engine.close()
+        geocode_client.close()
     print(format_route(route, args.origin, args.destination, args.vehicle_class))
 
 
