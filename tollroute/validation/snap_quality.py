@@ -34,11 +34,11 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-import httpx
 
 from tollroute.etl import coverage_audit
 from tollroute.etl.cluster_gates import haversine_m
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL, osrm_nearest
+from tollroute.etl.snap_report import osrm_nearest
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -60,10 +60,8 @@ class SnapResult:
     snap_distance_m: float
 
 
-def snap_all_gates(conn: sqlite3.Connection, client: httpx.Client) -> list[SnapResult]:
-    """Snap every gate with coordinates against the live OSRM instance `client`
-    is pointed at, writing `gates.snap_lat`/`snap_lon`/`snap_distance_m`.
-    """
+def snap_all_gates(conn: sqlite3.Connection, engine: RoutingEngine) -> list[SnapResult]:
+    """Snap every gate with coordinates against the live Valhalla instance."""
     gates = conn.execute(
         "SELECT gare_id, canonical_name, lat, lon FROM gates "
         "WHERE lat IS NOT NULL AND lon IS NOT NULL ORDER BY gare_id"
@@ -71,7 +69,7 @@ def snap_all_gates(conn: sqlite3.Connection, client: httpx.Client) -> list[SnapR
 
     results: list[SnapResult] = []
     for gare_id, canonical_name, lat, lon in gates:
-        waypoint = osrm_nearest(client, lat, lon)
+        waypoint = osrm_nearest(engine, lat, lon)
         snap_lon, snap_lat = waypoint["location"]
         snap_distance_m = haversine_m(lat, lon, snap_lat, snap_lon)
         conn.execute(
@@ -96,15 +94,21 @@ def snap_all_gates(conn: sqlite3.Connection, client: httpx.Client) -> list[SnapR
 
 
 def run(
-    conn: sqlite3.Connection, osrm_base_url: str = DEFAULT_OSRM_BASE_URL
+    conn: sqlite3.Connection, engine: RoutingEngine | None = None
 ) -> tuple[list[SnapResult], list[coverage_audit.SnapSuspect]]:
     """Snap every gate, then quarantine >200 m snaps to `suspect_gates`.
 
     `conn` must already point at a national (all-operator) build, e.g. from
     `coverage_audit.build_full_db`.
     """
-    with httpx.Client(base_url=osrm_base_url, timeout=10.0) as client:
-        results = snap_all_gates(conn, client)
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
+    try:
+        results = snap_all_gates(conn, engine)
+    finally:
+        if own_engine:
+            engine.close()
     suspects = coverage_audit.curate_snap_suspects(conn, SNAP_FLAG_THRESHOLD_M)
     logger.info(
         "snapped %d gates against the national OSRM instance; %d quarantined to "
@@ -120,14 +124,17 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=coverage_audit.DEFAULT_FULL_DB_PATH)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     args = parser.parse_args()
 
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
     conn, _ = coverage_audit.build_full_db(db_path=args.db)
     try:
-        run(conn, osrm_base_url=args.osrm_base_url)
+        run(conn, engine=engine)
     finally:
         conn.close()
+        engine.close()
 
 
 if __name__ == "__main__":

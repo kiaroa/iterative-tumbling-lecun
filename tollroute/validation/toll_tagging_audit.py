@@ -32,11 +32,9 @@ import random
 from dataclasses import dataclass
 from pathlib import Path
 
-import httpx
-
 from tollroute import matrices as mx
 from tollroute.etl.cluster_gates import PhysicalCluster, haversine_m
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -87,21 +85,12 @@ class IsolatedGateCheck:
 
 
 def osrm_route_geometry(
-    client: httpx.Client, origin: tuple[float, float], destination: tuple[float, float]
+    engine: RoutingEngine, origin: tuple[float, float], destination: tuple[float, float]
 ) -> dict | None:
-    """`exclude=toll` route with full GeoJSON geometry. None on OSRM NoRoute."""
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
-    resp = client.get(
-        f"/route/v1/car/{o_lon},{o_lat};{d_lon},{d_lat}"
-        "?overview=full&geometries=geojson&exclude=toll"
-    )
-    data = resp.json()
-    if data.get("code") == "NoRoute":
+    """Toll-free route with full GeoJSON geometry. None on NoRoute."""
+    data = engine.route(origin, destination, toll_free=True, geometry=True)
+    if data is None:
         return None
-    resp.raise_for_status()
-    if data["code"] != "Ok":
-        raise RuntimeError(f"OSRM /route failed for {origin}->{destination}: {data}")
     return data["routes"][0]
 
 
@@ -172,7 +161,7 @@ def sample_route_pairs(
 def run_route_proximity_sample(
     clusters: list[PhysicalCluster],
     tollfree_distance_m,
-    client: httpx.Client,
+    engine: RoutingEngine,
     sample_size: int = ROUTE_SAMPLE_SIZE,
     seed: int = ROUTE_SAMPLE_SEED,
 ) -> list[RouteProximityCheck]:
@@ -180,7 +169,7 @@ def run_route_proximity_sample(
     results: list[RouteProximityCheck] = []
     for i, j in pairs:
         a, b = clusters[i], clusters[j]
-        route = osrm_route_geometry(client, (a.lat, a.lon), (b.lat, b.lon))
+        route = osrm_route_geometry(engine, (a.lat, a.lon), (b.lat, b.lon))
         if route is None:
             continue
         passed, gate_id, dist_m = check_route_proximity(
@@ -199,15 +188,10 @@ def run_route_proximity_sample(
     return results
 
 
-def osrm_nearest_distance(client: httpx.Client, lat: float, lon: float, exclude_toll: bool) -> float:
-    url = f"/nearest/v1/car/{lon},{lat}"
-    if exclude_toll:
-        url += "?exclude=toll"
-    resp = client.get(url)
-    resp.raise_for_status()
-    data = resp.json()
+def osrm_nearest_distance(engine: RoutingEngine, lat: float, lon: float, exclude_toll: bool) -> float:
+    data = engine.nearest(lat, lon, toll_free=exclude_toll)
     if data["code"] != "Ok":
-        raise RuntimeError(f"OSRM /nearest failed for ({lat},{lon}): {data}")
+        raise RuntimeError(f"Valhalla /locate failed for ({lat},{lon}): {data}")
     waypoint = data["waypoints"][0]
     snap_lon, snap_lat = waypoint["location"]
     return haversine_m(lat, lon, snap_lat, snap_lon)
@@ -216,7 +200,7 @@ def osrm_nearest_distance(client: httpx.Client, lat: float, lon: float, exclude_
 def run_isolated_gate_sample(
     clusters: list[PhysicalCluster],
     tollfree_distance_m,
-    client: httpx.Client,
+    engine: RoutingEngine,
     sample_size: int = ISOLATED_SAMPLE_SIZE,
     seed: int = ISOLATED_SAMPLE_SEED,
 ) -> list[IsolatedGateCheck]:
@@ -229,8 +213,8 @@ def run_isolated_gate_sample(
     results: list[IsolatedGateCheck] = []
     for i in sample_idx:
         c = clusters[i]
-        default_m = osrm_nearest_distance(client, c.lat, c.lon, exclude_toll=False)
-        tollfree_m = osrm_nearest_distance(client, c.lat, c.lon, exclude_toll=True)
+        default_m = osrm_nearest_distance(engine, c.lat, c.lon, exclude_toll=False)
+        tollfree_m = osrm_nearest_distance(engine, c.lat, c.lon, exclude_toll=True)
         delta = tollfree_m - default_m
         results.append(
             IsolatedGateCheck(
@@ -241,15 +225,21 @@ def run_isolated_gate_sample(
 
 
 def run(
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
+    engine: RoutingEngine | None = None,
 ) -> tuple[list[RouteProximityCheck], list[IsolatedGateCheck]]:
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
     clusters = sorted(mx.physical_gate_points(), key=lambda c: c.physical_gate_id)
     loaded = mx.load_matrices()
     tollfree_distance_m = loaded["tollfree_distance_m"]
 
-    with httpx.Client(base_url=osrm_base_url, timeout=30.0) as client:
-        proximity = run_route_proximity_sample(clusters, tollfree_distance_m, client)
-        isolated = run_isolated_gate_sample(clusters, tollfree_distance_m, client)
+    try:
+        proximity = run_route_proximity_sample(clusters, tollfree_distance_m, engine)
+        isolated = run_isolated_gate_sample(clusters, tollfree_distance_m, engine)
+    finally:
+        if own_engine:
+            engine.close()
 
     failed = [r for r in proximity if not r.passed]
     confirmed = [r for r in isolated if r.confirms_conjecture]
@@ -267,9 +257,14 @@ def run(
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     args = parser.parse_args()
-    run(osrm_base_url=args.osrm_base_url)
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    try:
+        run(engine=engine)
+    finally:
+        engine.close()
 
 
 if __name__ == "__main__":

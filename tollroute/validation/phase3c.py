@@ -20,7 +20,7 @@ import logging
 from pathlib import Path
 
 from tollroute.etl import coverage_audit
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 from tollroute.validation import distance_error, snap_quality, toll_tagging_audit
 
 logger = logging.getLogger(__name__)
@@ -158,7 +158,7 @@ def render_report(
     lines.append("")
     lines.append("| gare_id | name | bad/total |")
     lines.append("|---|---|---|")
-    for g in sorted(distance_quarantined, key=lambda g: -(g.bad_count / g.total_count))[:15]:
+    for g in sorted(distance_quarantined, key=lambda g: -(g.bad_count / g.total_count) if g.total_count else 0)[:15]:
         lines.append(f"| {g.gare_id} | {g.canonical_name} | {g.bad_count}/{g.total_count} |")
     lines.append("")
 
@@ -250,16 +250,21 @@ def render_report(
 
 def run(
     db_path: Path = coverage_audit.DEFAULT_FULL_DB_PATH,
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
+    engine: RoutingEngine | None = None,
     report_path: Path = DEFAULT_REPORT_PATH,
 ) -> None:
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
     conn, _build = coverage_audit.build_full_db(db_path=db_path)
     try:
-        snap_results, snap_suspects = snap_quality.run(conn, osrm_base_url=osrm_base_url)
-        distance_result, distance_quarantined = distance_error.run(conn)
-        proximity_checks, isolated_checks = toll_tagging_audit.run(osrm_base_url=osrm_base_url)
+        snap_results, snap_suspects = snap_quality.run(conn, engine=engine)
+        distance_result, distance_quarantined = distance_error.run(conn, engine=engine)
+        proximity_checks, isolated_checks = toll_tagging_audit.run(engine=engine)
     finally:
         conn.close()
+        if own_engine:
+            engine.close()
 
     report = render_report(
         snap_results,
@@ -278,10 +283,15 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=coverage_audit.DEFAULT_FULL_DB_PATH)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT_PATH)
     args = parser.parse_args()
-    run(db_path=args.db, osrm_base_url=args.osrm_base_url, report_path=args.report)
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    try:
+        run(db_path=args.db, engine=engine, report_path=args.report)
+    finally:
+        engine.close()
 
 
 if __name__ == "__main__":
