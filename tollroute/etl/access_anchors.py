@@ -62,11 +62,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-import httpx
-
 from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
 from tollroute.graph import OSRM_TABLE_MAX_DIMENSION
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +100,24 @@ GOOD_ENOUGH_APRON_M = 500.0
 # along a route's geometry this module scans before giving up on that reference.
 APRON_REJECT_DISTANCE_M = 2_000.0
 
+# Snap-based isolation thresholds: if the notoll graph snaps a gate coordinate
+# more than this far AND more than RATIO× farther than the full graph, the gate
+# sits inside a toll pocket (the nearest non-toll road is a distant service track,
+# not a real approach road). Empirically from 30-gate sample: isolated gates have
+# notoll snap 10–350m vs full 1–5m; genuinely accessible gates have both snapping
+# within ~35m at similar distances. 50m / 3× clears both populations cleanly.
+_ISOLATION_SNAP_M = 50.0
+_ISOLATION_RATIO = 3.0
+
+# Edge quality thresholds for snaps within _ISOLATION_SNAP_M: a snap landing on
+# a track, driveway, or similarly poor road is not a usable access point even if
+# it is geometrically close. Either criterion failing triggers anchor search.
+_MIN_ANCHOR_SPEED_KMH = 30
+_BAD_SNAP_USES = frozenset({
+    "track", "driveway", "alley", "parking_aisle",
+    "emergency_access", "drive_through", "golf_cart", "living_street",
+})
+
 
 @dataclass(frozen=True)
 class AccessAnchor:
@@ -129,112 +145,81 @@ def _haversine_m(a: tuple[float, float], b: tuple[float, float]) -> float:
 
 
 def _route_geometry(
-    client: httpx.Client, origin: tuple[float, float], destination: tuple[float, float]
+    engine: RoutingEngine, origin: tuple[float, float], destination: tuple[float, float]
 ) -> list[tuple[float, float]] | None:
-    """Full-resolution (lat, lon) geometry of the plain (toll allowed) `/route` from
+    """Full-resolution (lat, lon) geometry of the plain (toll allowed) route from
     `origin` to `destination`, in driving order; None on NoRoute.
     """
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
-    resp = client.get(
-        f"/route/v1/car/{o_lon},{o_lat};{d_lon},{d_lat}?overview=full&geometries=geojson"
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("code") == "NoRoute":
+    data = engine.route(origin, destination, geometry=True)
+    if data is None:
         return None
-    if data.get("code") != "Ok":
-        raise RuntimeError(f"OSRM /route failed for {origin}->{destination}: {data}")
     return [(lat, lon) for lon, lat in data["routes"][0]["geometry"]["coordinates"]]
 
 
 def _plain_leg(
-    client: httpx.Client, origin: tuple[float, float], destination: tuple[float, float]
+    engine: RoutingEngine, origin: tuple[float, float], destination: tuple[float, float]
 ) -> tuple[float, float] | None:
-    """(duration_s, distance_m) for the plain (toll allowed) `/route`; None on NoRoute."""
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
-    resp = client.get(f"/route/v1/car/{o_lon},{o_lat};{d_lon},{d_lat}?overview=false")
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("code") == "NoRoute":
+    """(duration_s, distance_m) for the plain (toll allowed) route; None on NoRoute."""
+    data = engine.route(origin, destination)
+    if data is None:
         return None
-    if data.get("code") != "Ok":
-        raise RuntimeError(f"OSRM /route failed for {origin}->{destination}: {data}")
     route = data["routes"][0]
     return route["duration"], route["distance"]
 
 
 def _gate_reachable(
-    client: httpx.Client,
+    engine: RoutingEngine,
     gate_point: tuple[float, float],
     reference_points: list[tuple[float, float]],
     direction: Direction,
 ) -> bool:
-    """True if `gate_point` is toll-free-reachable from/to at least one reference point,
-    in `direction` ('entry': reference -> gate_point; 'exit': gate_point -> reference).
-    One batched `/table` call for all reference points.
+    """True if `gate_point` is not toll-isolated (no anchor needed for this direction).
+
+    Uses snap distance comparison between the full and notoll Valhalla instances.
+    A gate is isolated if the notoll graph snaps its coordinate significantly
+    farther than the full graph — meaning the nearest non-toll road is a distant
+    service track rather than a genuine approach road. `reference_points` and
+    `direction` are kept for interface compatibility but not used in the check
+    (snap distance is direction-agnostic and requires no matrix call).
     """
-    g_lat, g_lon = gate_point
-    refs = ";".join(f"{r_lon},{r_lat}" for r_lat, r_lon in reference_points)
-    n = len(reference_points)
-    if direction == "entry":
-        locations = f"{refs};{g_lon},{g_lat}"
-        sources = ";".join(str(i) for i in range(n))
-        destinations = str(n)
-    else:
-        locations = f"{g_lon},{g_lat};{refs}"
-        sources = "0"
-        destinations = ";".join(str(i) for i in range(1, n + 1))
-    resp = client.get(
-        f"/table/v1/car/{locations}?annotations=duration&exclude=toll"
-        f"&sources={sources}&destinations={destinations}"
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("code") != "Ok":
+    lat, lon = gate_point
+    notoll = engine.nearest(lat, lon, toll_free=True)
+    if notoll["code"] == "NoSegment":
         return False
-    durations = data["durations"]
-    if direction == "entry":
-        return any(row[0] is not None for row in durations)
-    return any(d is not None for d in durations[0])
+    wp = notoll["waypoints"][0]
+    notoll_dist = wp["distance"]
+    if notoll_dist <= _ISOLATION_SNAP_M:
+        use = wp.get("use", "")
+        speed = wp.get("default_speed", 0)
+        if use in _BAD_SNAP_USES or speed < _MIN_ANCHOR_SPEED_KMH:
+            return False  # snapped onto a track/driveway/slow road — needs anchor
+        return True
+    full = engine.nearest(lat, lon, toll_free=False)
+    if full["code"] != "Ok":
+        return True  # gate missing from full graph — treat as accessible
+    full_dist = full["waypoints"][0]["distance"]
+    return notoll_dist <= full_dist * _ISOLATION_RATIO
 
 
 def _batch_reachable(
-    client: httpx.Client,
+    engine: RoutingEngine,
     reference: tuple[float, float],
     points: list[tuple[float, float]],
     direction: Direction,
 ) -> list[bool]:
-    """Per-point reachability of `points` to/from `reference`, in `direction`, as one
-    batched `/table` call (`points` is already bounded to <= `OSRM_TABLE_MAX_DIMENSION`
-    by the caller).
+    """Per-point reachability of `points` to/from `reference`, in `direction`.
+
+    `points` is already bounded to <= `OSRM_TABLE_MAX_DIMENSION` by the caller.
     """
-    r_lat, r_lon = reference
-    locations = f"{r_lon},{r_lat};" + ";".join(f"{lon},{lat}" for lat, lon in points)
-    n = len(points)
     if direction == "entry":
-        # reference -> each point
-        sources, destinations = "0", ";".join(str(i) for i in range(1, n + 1))
+        results = engine.one_to_many_table(reference, points, exclude_toll=True)
     else:
-        # each point -> reference
-        sources, destinations = ";".join(str(i) for i in range(1, n + 1)), "0"
-    resp = client.get(
-        f"/table/v1/car/{locations}?annotations=duration&exclude=toll"
-        f"&sources={sources}&destinations={destinations}"
-    )
-    resp.raise_for_status()
-    data = resp.json()
-    if data.get("code") != "Ok":
-        return [False] * n
-    durations = data["durations"]
-    if direction == "entry":
-        return [d is not None for d in durations[0]]
-    return [row[0] is not None for row in durations]
+        results = engine.many_to_one_table(points, reference, exclude_toll=True)
+    return [r is not None for r in results]
 
 
 def find_anchor(
-    client: httpx.Client,
+    engine: RoutingEngine,
     gare_id: int,
     direction: Direction,
     gate_point: tuple[float, float],
@@ -248,9 +233,9 @@ def find_anchor(
     best: AccessAnchor | None = None
     for reference in reference_points:
         geometry = (
-            _route_geometry(client, reference, gate_point)
+            _route_geometry(engine, reference, gate_point)
             if direction == "entry"
-            else _route_geometry(client, gate_point, reference)
+            else _route_geometry(engine, gate_point, reference)
         )
         if geometry is None:
             continue
@@ -273,7 +258,7 @@ def find_anchor(
         if not bounded:
             continue
 
-        reachable = _batch_reachable(client, reference, bounded, direction)
+        reachable = _batch_reachable(engine, reference, bounded, direction)
         try:
             idx = reachable.index(True)
         except ValueError:
@@ -281,9 +266,9 @@ def find_anchor(
         candidate_point = bounded[idx]
 
         apron = (
-            _plain_leg(client, candidate_point, gate_point)
+            _plain_leg(engine, candidate_point, gate_point)
             if direction == "entry"
-            else _plain_leg(client, gate_point, candidate_point)
+            else _plain_leg(engine, gate_point, candidate_point)
         )
         if apron is None:
             continue
@@ -370,29 +355,33 @@ def render_report(
 
 def run(
     db_path: Path = DEFAULT_NATIONAL_DB_PATH,
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
     report_path: Path = DEFAULT_REPORT_PATH,
+    engine: RoutingEngine | None = None,
 ) -> list[AccessAnchor]:
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
     conn = sqlite3.connect(db_path)
     try:
         rows = gate_rows(conn)
         anchors: list[AccessAnchor] = []
         needed: dict[Direction, int] = {"entry": 0, "exit": 0}
         found: dict[Direction, int] = {"entry": 0, "exit": 0}
-        with httpx.Client(base_url=osrm_base_url, timeout=30.0) as client:
-            for gare_id, lat, lon in rows:
-                gate_point = (lat, lon)
-                for direction in ("entry", "exit"):
-                    if _gate_reachable(client, gate_point, REFERENCE_POINTS, direction):
-                        continue  # gate's own coordinate is fine as-is for this direction
-                    needed[direction] += 1
-                    anchor = find_anchor(client, gare_id, direction, gate_point)
-                    if anchor is not None:
-                        anchors.append(anchor)
-                        found[direction] += 1
+        for gare_id, lat, lon in rows:
+            gate_point = (lat, lon)
+            for direction in ("entry", "exit"):
+                if _gate_reachable(engine, gate_point, REFERENCE_POINTS, direction):
+                    continue
+                needed[direction] += 1
+                anchor = find_anchor(engine, gare_id, direction, gate_point)
+                if anchor is not None:
+                    anchors.append(anchor)
+                    found[direction] += 1
         write_anchors(conn, anchors)
     finally:
         conn.close()
+        if own_engine:
+            engine.close()
 
     logger.info(
         "access anchors: entry %d/%d needed found, exit %d/%d needed found",
@@ -412,10 +401,15 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=DEFAULT_NATIONAL_DB_PATH)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT_PATH)
     args = parser.parse_args()
-    run(db_path=args.db, osrm_base_url=args.osrm_base_url, report_path=args.report)
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    try:
+        run(db_path=args.db, report_path=args.report, engine=engine)
+    finally:
+        engine.close()
 
 
 if __name__ == "__main__":

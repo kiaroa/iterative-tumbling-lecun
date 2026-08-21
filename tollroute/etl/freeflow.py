@@ -371,6 +371,82 @@ def write_suspect_gates(
     conn.commit()
 
 
+def remap_open_system_pseudo_gate(conn: sqlite3.Connection) -> list[tuple[int, str, float]]:
+    """Rewrite fares against a non-physical pseudo-gate into flat self-loop charges on the
+    real gate they are paired with. Returns [(gare_id, name, class1)] for what was remapped.
+
+    APRR/AREA file the open-system (`système ouvert`) charge as an OD pair between a real
+    gate and a pseudo-gate literally named "Système Ouvert", which stands for a *set* of
+    barrier-free entry points rather than one place. Loading it as an ordinary gate-to-gate
+    fare is wrong in both directions: it invents a journey to a single geocoded point (near
+    Auxerre on the A6) that no driver makes, and it loses 18 real prices when that point is
+    quarantined.
+
+    **Evidence this is a per-gate flat charge, not a distance to one place** (measured
+    against live OSRM over all 18 rows):
+
+    - Driving distance from each paired gate to the pseudo-gate's own coordinate is
+      112-397 km, against a stated `distance_km` of 7-61 km. Not that point.
+    - No common reference point exists: for only 2 of 153 gate pairs does the difference in
+      their `distance_km` match the driving distance between them, and the correlation
+      between the two is +0.23. Each row measures to a *different* place.
+    - Nor is it the nearest gate (2/18 within 5%) or the nearest barrier gate (1/18) - the
+      entry points are barrier-free, so they are not in `gare_master.csv` at all.
+    - What the distances *do* behave like is genuine tariff distance: EUR/km clusters
+      tightly per operator, APRR median 0.0968 and AREA median 0.1280 (19% spread), AREA
+      being dearer as its Alpine network is. A shared endpoint would give noise, not two
+      clean rate bands.
+
+    The data cannot distinguish "distance to the nearest barrier-free entry point" from
+    "length of the open-system section this gate's charge covers" - both predict everything
+    observed - but every reading agrees the charge belongs to the paired gate. The self-loop
+    encoding `graph.py` already applies to A14's gantries (`from_id == to_id`, priced at zero
+    physical distance) is exactly that shape, so this reuses it rather than adding a concept.
+
+    **One row is a different animal, flagged:** gare_id 489 LUSSE bills EUR 6.80 for 10.75 km
+    (0.633 EUR/km, six times the APRR rate) and is the only fare row that gate has anywhere in
+    the table. Its coordinate is the Tunnel Maurice-Lemaire portal at Sainte-Marie-aux-Mines -
+    a flat tunnel toll misfiled under the same pseudo-gate. Self-loop is still the right
+    encoding for a flat per-passage charge, so it is remapped with the rest; the tunnel
+    identification itself is inferred from the coordinate and is **not** verified against an
+    APRR tariff.
+    """
+    from tollroute.validation import gate_verdict
+
+    pseudo_ids = gate_verdict.non_physical_gate_ids()
+    if not pseudo_ids:
+        return []
+    placeholders = ",".join("?" for _ in pseudo_ids)
+    ids = list(pseudo_ids)
+    rows = conn.execute(
+        f"SELECT id, from_gare_id, to_gare_id, from_gare, to_gare, class1 FROM fares "
+        f"WHERE (to_gare_id IN ({placeholders}) OR from_gare_id IN ({placeholders})) "
+        f"AND from_gare_id IS NOT NULL AND to_gare_id IS NOT NULL",
+        ids + ids,
+    ).fetchall()
+
+    remapped: list[tuple[int, str, float]] = []
+    for fare_id, from_id, to_id, from_name, to_name, class1 in rows:
+        real_id = from_id if to_id in pseudo_ids else to_id
+        real_name = from_name if to_id in pseudo_ids else to_name
+        if real_id in pseudo_ids:
+            continue  # pseudo-gate on both sides: nothing real to attach the charge to
+        conn.execute(
+            "UPDATE fares SET from_gare_id = ?, to_gare_id = ?, from_gare = ?, to_gare = ? "
+            "WHERE id = ?",
+            (real_id, real_id, real_name, real_name, fare_id),
+        )
+        remapped.append((real_id, real_name, class1))
+    conn.commit()
+    if remapped:
+        logger.info(
+            "remapped %d open-system pseudo-gate fares into flat self-loop charges on the "
+            "real gate they were paired with",
+            len(remapped),
+        )
+    return remapped
+
+
 def render_report(
     classifications: list[CorridorClassification],
     coordinateless: list[CoordinatelessGate],

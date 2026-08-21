@@ -22,14 +22,15 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
-import httpx
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB_PATH = REPO_ROOT / "tollroute" / "db" / "tollroute.sqlite"
 DEFAULT_REPORT_PATH = REPO_ROOT / "reports" / "phase1b_snapping.md"
-DEFAULT_OSRM_BASE_URL = "http://localhost:5000"
+# ponytail: legacy name kept for any importers not yet migrated; points to Valhalla full instance.
+DEFAULT_OSRM_BASE_URL = DEFAULT_FULL_URL
 
 SNAP_FLAG_THRESHOLD_M = 200.0
 
@@ -114,28 +115,24 @@ GEO_ONLY_TEST_PAIR = GeoOnlyPair(
 )
 
 
-def osrm_nearest(client: httpx.Client, lat: float, lon: float) -> dict:
-    resp = client.get(f"/nearest/v1/car/{lon},{lat}")
-    resp.raise_for_status()
-    data = resp.json()
+def osrm_nearest(engine: RoutingEngine, lat: float, lon: float) -> dict:
+    """Snap (lat, lon); returns OSRM-compatible waypoints[0] dict."""
+    data = engine.nearest(lat, lon)
     if data["code"] != "Ok":
-        raise RuntimeError(f"OSRM /nearest failed for ({lat},{lon}): {data}")
+        raise RuntimeError(f"Valhalla /locate returned no snap for ({lat},{lon})")
     return data["waypoints"][0]
 
 
 def osrm_route(
-    client: httpx.Client, origin: tuple[float, float], destination: tuple[float, float], exclude_toll: bool
+    engine: RoutingEngine,
+    origin: tuple[float, float],
+    destination: tuple[float, float],
+    exclude_toll: bool = False,
 ) -> dict:
-    o_lat, o_lon = origin
-    d_lat, d_lon = destination
-    params = "overview=false"
-    if exclude_toll:
-        params += "&exclude=toll"
-    resp = client.get(f"/route/v1/car/{o_lon},{o_lat};{d_lon},{d_lat}?{params}")
-    resp.raise_for_status()
-    data = resp.json()
-    if data["code"] != "Ok":
-        raise RuntimeError(f"OSRM /route failed for {origin}->{destination}: {data}")
+    """Route origin→destination; returns routes[0] dict with duration/distance."""
+    data = engine.route(origin, destination, toll_free=exclude_toll)
+    if data is None:
+        raise RuntimeError(f"Valhalla returned NoRoute for {origin}->{destination}")
     return data["routes"][0]
 
 
@@ -150,14 +147,14 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(min(1.0, a**0.5))
 
 
-def snap_all_gates(conn: sqlite3.Connection, client: httpx.Client) -> list[dict]:
+def snap_all_gates(conn: sqlite3.Connection, engine: RoutingEngine) -> list[dict]:
     gates = conn.execute(
         "SELECT gare_id, canonical_name, lat, lon FROM gates WHERE lat IS NOT NULL AND lon IS NOT NULL"
     ).fetchall()
 
     results = []
     for gare_id, canonical_name, lat, lon in gates:
-        waypoint = osrm_nearest(client, lat, lon)
+        waypoint = osrm_nearest(engine, lat, lon)
         snap_lon, snap_lat = waypoint["location"]
         snap_distance_m = haversine_m(lat, lon, snap_lat, snap_lon)
         conn.execute(
@@ -186,7 +183,7 @@ def snap_all_gates(conn: sqlite3.Connection, client: httpx.Client) -> list[dict]
     return results
 
 
-def verify_fare_pair(conn: sqlite3.Connection, client: httpx.Client, pair: FareGatePair) -> dict:
+def verify_fare_pair(conn: sqlite3.Connection, engine: RoutingEngine, pair: FareGatePair) -> dict:
     fare_row = conn.execute(
         "SELECT from_gare, to_gare, distance_km, class1 FROM fares "
         "WHERE from_gare_id = ? AND to_gare_id = ?",
@@ -207,8 +204,8 @@ def verify_fare_pair(conn: sqlite3.Connection, client: httpx.Client, pair: FareG
         "SELECT lat, lon FROM gates WHERE gare_id = ?", (pair.to_gare_id,)
     ).fetchone()
 
-    tolled = osrm_route(client, origin, destination, exclude_toll=False)
-    toll_free = osrm_route(client, origin, destination, exclude_toll=True)
+    tolled = osrm_route(engine, origin, destination, exclude_toll=False)
+    toll_free = osrm_route(engine, origin, destination, exclude_toll=True)
     distinct = (
         tolled["distance"] != toll_free["distance"] or tolled["duration"] != toll_free["duration"]
     )
@@ -228,9 +225,9 @@ def verify_fare_pair(conn: sqlite3.Connection, client: httpx.Client, pair: FareG
     }
 
 
-def verify_geo_only_pair(client: httpx.Client, pair: GeoOnlyPair) -> dict:
-    tolled = osrm_route(client, pair.origin, pair.destination, exclude_toll=False)
-    toll_free = osrm_route(client, pair.origin, pair.destination, exclude_toll=True)
+def verify_geo_only_pair(engine: RoutingEngine, pair: GeoOnlyPair) -> dict:
+    tolled = osrm_route(engine, pair.origin, pair.destination, exclude_toll=False)
+    toll_free = osrm_route(engine, pair.origin, pair.destination, exclude_toll=True)
     distinct = not (
         math.isclose(
             tolled["distance"], toll_free["distance"], rel_tol=GEO_ONLY_MATERIAL_DIVERGENCE_REL_TOL
@@ -339,16 +336,20 @@ def render_report(
 def run(
     db_path: Path = DEFAULT_DB_PATH,
     report_path: Path = DEFAULT_REPORT_PATH,
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
+    engine: RoutingEngine | None = None,
 ) -> str:
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
     conn = sqlite3.connect(db_path)
     try:
-        with httpx.Client(base_url=osrm_base_url, timeout=10.0) as client:
-            snap_results = snap_all_gates(conn, client)
-            fare_pair_results = [verify_fare_pair(conn, client, p) for p in FARE_TEST_PAIRS]
-            geo_only_result = verify_geo_only_pair(client, GEO_ONLY_TEST_PAIR)
+        snap_results = snap_all_gates(conn, engine)
+        fare_pair_results = [verify_fare_pair(conn, engine, p) for p in FARE_TEST_PAIRS]
+        geo_only_result = verify_geo_only_pair(engine, GEO_ONLY_TEST_PAIR)
     finally:
         conn.close()
+        if own_engine:
+            engine.close()
 
     report = render_report(snap_results, fare_pair_results, geo_only_result)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -370,9 +371,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT_PATH)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     args = parser.parse_args()
-    run(db_path=args.db, report_path=args.report, osrm_base_url=args.osrm_base_url)
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    try:
+        run(db_path=args.db, report_path=args.report, engine=engine)
+    finally:
+        engine.close()
 
 
 if __name__ == "__main__":

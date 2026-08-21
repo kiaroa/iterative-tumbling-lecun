@@ -59,6 +59,12 @@ CREATE TABLE IF NOT EXISTS fares (
     class3        REAL,
     class4        REAL,
     class5        REAL,
+    -- Row-level quarantine (Phase 3c revision). Set by
+    -- `tollroute.validation.distance_error`: a fare row whose source `distance_km` and the
+    -- OSRM tolled distance disagree beyond the threshold is dropped on its own, instead of
+    -- quarantining its endpoint gate and taking every other fare that touches it down too.
+    quarantined      INTEGER NOT NULL DEFAULT 0,
+    quarantine_reason TEXT,
     FOREIGN KEY (from_gare_id) REFERENCES gates (gare_id),
     FOREIGN KEY (to_gare_id) REFERENCES gates (gare_id)
 );

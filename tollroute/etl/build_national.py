@@ -59,12 +59,13 @@ from __future__ import annotations
 import argparse
 import csv
 import logging
+import sqlite3
 from collections import Counter
 from pathlib import Path
 
 from tollroute import cost
 from tollroute.etl import coverage_audit, freeflow, operators, rematch_blank_ids, remediate_zero_price
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 from tollroute.validation import distance_error, snap_quality
 
 logger = logging.getLogger(__name__)
@@ -156,9 +157,13 @@ def run(
     db_path: Path = DEFAULT_NATIONAL_DB_PATH,
     od_pairs_path: Path = DEFAULT_OD_PAIRS_PATH,
     gare_master_path: Path = DEFAULT_GARE_MASTER_PATH,
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
+    engine: RoutingEngine | None = None,
     report_path: Path = DEFAULT_REPORT_PATH,
 ) -> dict:
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
+
     if db_path.exists():
         db_path.unlink()  # AUTOINCREMENT row-id alignment - see module docstring
 
@@ -175,10 +180,17 @@ def run(
             conn, od_pairs_path, gare_master_path
         )
         coordinateless_count = apply_coordinateless_quarantine(conn, od_pairs_path, gare_master_path)
+        # Before the distance check: once these are self-loops they are no longer a
+        # gate-to-gate pair, so they can neither inflate the error distribution nor be
+        # row-quarantined against a journey nobody makes.
+        open_system_remapped = freeflow.remap_open_system_pseudo_gate(conn)
 
-        snap_results, snap_suspects = snap_quality.run(conn, osrm_base_url=osrm_base_url)
+        snap_results, snap_suspects = snap_quality.run(conn, engine=engine)
         distance_result, distance_suspects = distance_error.run(
-            conn, od_pairs_path=od_pairs_path, gare_master_path=gare_master_path
+            conn,
+            od_pairs_path=od_pairs_path,
+            gare_master_path=gare_master_path,
+            engine=engine,
         )
 
         # Phase 5b-follow-up-2: seeded after snap-quality/distance-error, not before -
@@ -189,6 +201,20 @@ def run(
 
         cost.seed_class_config(conn)
         conn.commit()
+
+        # Phase 5b-follow-up-1's anchors were never part of this pipeline, yet `run` deletes
+        # and recreates the DB file - so every rebuild silently emptied `access_anchors` and
+        # nobody noticed until a barrier gate (BOULOGNE EST, the péage d'Herquelingue) turned
+        # out to be unreachable in the exclude=toll graph, making the whole A16 corridor
+        # unusable as an entry. Regenerated here so a rebuild can never drop them again.
+        # Imported here, not at module scope: `access_anchors` imports
+        # DEFAULT_NATIONAL_DB_PATH back from this module, so a top-level import is circular
+        # and breaks `tollroute.api` at start-up.
+        from tollroute.etl import access_anchors
+
+        conn.close()
+        anchors = access_anchors.run(db_path=db_path, engine=engine)
+        conn = sqlite3.connect(db_path)
 
         (final_fare_count,) = conn.execute("SELECT COUNT(*) FROM fares").fetchone()
         (suspect_count,) = conn.execute("SELECT COUNT(*) FROM suspect_gates").fetchone()
@@ -207,6 +233,8 @@ def run(
             "rematch_matched": rematch_matched,
             "rematch_dropped": rematch_dropped,
             "coordinateless_count": coordinateless_count,
+            "open_system_remapped": len(open_system_remapped),
+            "access_anchor_count": len(anchors),
             "snap_suspect_count": len(snap_suspects),
             "distance_suspect_count": len(distance_suspects),
         }
@@ -217,6 +245,8 @@ def run(
         return summary
     finally:
         conn.close()
+        if own_engine:
+            engine.close()
 
 
 def render_report(summary: dict) -> str:
@@ -239,6 +269,9 @@ def render_report(summary: dict) -> str:
         f"| blank endpoints resolved | {summary['rematch_matched']} |",
         f"| blank endpoints left unresolved (NULL) | {summary['rematch_dropped']} |",
         f"| coordinate-less gates quarantined | {summary['coordinateless_count']} |",
+        f"| open-system pseudo-gate fares remapped to flat self-loop charges | "
+        f"{summary['open_system_remapped']} |",
+        f"| per-gate toll-free access anchors precomputed | {summary['access_anchor_count']} |",
         f"| gates quarantined (snap > 200 m) | {summary['snap_suspect_count']} |",
         f"| gates quarantined (distance error > 20%, gate-level policy) | "
         f"{summary['distance_suspect_count']} |",
@@ -260,16 +293,21 @@ def main() -> None:
     parser.add_argument("--db", type=Path, default=DEFAULT_NATIONAL_DB_PATH)
     parser.add_argument("--od-pairs", type=Path, default=DEFAULT_OD_PAIRS_PATH)
     parser.add_argument("--gare-master", type=Path, default=DEFAULT_GARE_MASTER_PATH)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT_PATH)
     args = parser.parse_args()
-    run(
-        db_path=args.db,
-        od_pairs_path=args.od_pairs,
-        gare_master_path=args.gare_master,
-        osrm_base_url=args.osrm_base_url,
-        report_path=args.report,
-    )
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    try:
+        run(
+            db_path=args.db,
+            od_pairs_path=args.od_pairs,
+            gare_master_path=args.gare_master,
+            engine=engine,
+            report_path=args.report,
+        )
+    finally:
+        engine.close()
 
 
 if __name__ == "__main__":
