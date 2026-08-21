@@ -1,0 +1,33 @@
+# Valhalla routing services — Phase 1 Valhalla migration.
+#
+# Two instances over two tile sets:
+#   valhalla-full   (:8002) — france.osm.pbf, tolls allowed
+#   valhalla-notoll (:8003) — france-notoll.osm.pbf (toll=yes ways stripped)
+#
+# Build tiles first:  ./build_france.sh
+# Start services:     docker compose up -d
+# Stop services:      docker compose down
+#
+# docker-outside-of-docker note (same as osrm/docker-compose.yml): bind-mount
+# sources resolve against the HOST filesystem. Set VALHALLA_DATA_DIR to the
+# host-side absolute path of this valhalla/data directory before running
+# `docker compose up`. See build_france.sh — it prints the correct value.
+
+services:
+  valhalla-full:
+    image: valhalla/valhalla:run-latest
+    command: valhalla_service /custom_files/valhalla.json 2
+    ports:
+      - "8002:8002"
+    volumes:
+      - ${VALHALLA_DATA_DIR}/full:/custom_files
+    restart: unless-stopped
+
+  valhalla-notoll:
+    image: valhalla/valhalla:run-latest
+    command: valhalla_service /custom_files/valhalla.json 2
+    ports:
+      - "8003:8003"
+    volumes:
+      - ${VALHALLA_DATA_DIR}/notoll:/custom_files
+    restart: unless-stopped
