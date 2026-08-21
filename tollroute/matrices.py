@@ -35,12 +35,10 @@ import logging
 import random
 from pathlib import Path
 
-import httpx
 import numpy as np
 
 from tollroute.etl import cluster_gates
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
-from tollroute.graph import osrm_table
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -95,15 +93,71 @@ def _to_array(rows: list[list[float | None]], n: int) -> tuple[np.ndarray, int]:
     return arr, missing
 
 
+def _anchor_coords_for_clusters(
+    clusters: list[cluster_gates.PhysicalCluster],
+    db_path: Path,
+) -> tuple[list[tuple[float, float]], list[tuple[float, float]]]:
+    """Exit/entry anchor coordinates per cluster, loaded from the access_anchors table.
+
+    Returns (source_coords, dest_coords): parallel lists of (lat, lon), one per cluster.
+    source_coords uses the exit anchor (outbound from toll section); dest_coords uses the
+    entry anchor (inbound). Falls back to the cluster's raw coordinate for any gate or
+    direction with no anchor row. Looks up by physical_gate_id, which is itself a gare_id.
+    """
+    import sqlite3
+
+    exit_anchors: dict[int, tuple[float, float]] = {}
+    entry_anchors: dict[int, tuple[float, float]] = {}
+    try:
+        conn = sqlite3.connect(db_path)
+        try:
+            rows = conn.execute(
+                "SELECT gare_id, direction, anchor_lat, anchor_lon FROM access_anchors"
+            ).fetchall()
+        finally:
+            conn.close()
+        for gare_id, direction, lat, lon in rows:
+            if direction == "exit":
+                exit_anchors[gare_id] = (lat, lon)
+            else:
+                entry_anchors[gare_id] = (lat, lon)
+    except Exception as exc:
+        logger.warning(
+            "could not load access_anchors from %s (%s); falling back to raw gate coords",
+            db_path,
+            exc,
+        )
+
+    source_coords = [exit_anchors.get(c.physical_gate_id, (c.lat, c.lon)) for c in clusters]
+    dest_coords = [entry_anchors.get(c.physical_gate_id, (c.lat, c.lon)) for c in clusters]
+    logger.info(
+        "tollfree matrix: exit anchors for %d/%d sources, entry anchors for %d/%d dests",
+        sum(1 for c in clusters if c.physical_gate_id in exit_anchors),
+        len(clusters),
+        sum(1 for c in clusters if c.physical_gate_id in entry_anchors),
+        len(clusters),
+    )
+    return source_coords, dest_coords
+
+
 def compute_matrices(
-    clusters: list[cluster_gates.PhysicalCluster], osrm_client: httpx.Client
+    clusters: list[cluster_gates.PhysicalCluster],
+    engine: RoutingEngine,
+    db_path: Path | None = None,
 ) -> dict[str, np.ndarray]:
     coords = [(c.lat, c.lon) for c in clusters]
     n = len(coords)
-    logger.info("computing OSRM /table matrices for %d physical gate points", n)
+    logger.info("computing Valhalla matrix for %d physical gate points", n)
 
-    tolled_durations, tolled_distances = osrm_table(osrm_client, coords, exclude_toll=False)
-    tollfree_durations, tollfree_distances = osrm_table(osrm_client, coords, exclude_toll=True)
+    tolled_durations, tolled_distances = engine.table(coords, toll_free=False)
+
+    if db_path is not None:
+        src_coords, dst_coords = _anchor_coords_for_clusters(clusters, db_path)
+        tollfree_durations, tollfree_distances = engine.asymmetric_table(
+            src_coords, dst_coords, toll_free=True
+        )
+    else:
+        tollfree_durations, tollfree_distances = engine.table(coords, toll_free=True)
 
     raw = {
         "tolled_duration_s": tolled_durations,
@@ -316,12 +370,17 @@ def render_report(
 def run(
     gare_master_path: Path = cluster_gates.DEFAULT_GARE_MASTER_PATH,
     matrix_dir: Path = DEFAULT_MATRIX_DIR,
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
+    full_url: str = DEFAULT_FULL_URL,
+    tollfree_url: str = DEFAULT_TOLLFREE_URL,
     report_path: Path = DEFAULT_REPORT_PATH,
+    db_path: Path | None = None,
 ) -> tuple[dict[str, np.ndarray], list[dict]]:
     clusters = physical_gate_points(gare_master_path)
-    with httpx.Client(base_url=osrm_base_url, timeout=120.0) as client:
-        matrices = compute_matrices(clusters, client)
+    engine = RoutingEngine(full_url=full_url, tollfree_url=tollfree_url, timeout=120.0)
+    try:
+        matrices = compute_matrices(clusters, engine, db_path=db_path)
+    finally:
+        engine.close()
     save_matrices(matrices, matrix_dir)
 
     # Round-trip through the fail-fast loader so a corrupt/partial write is
@@ -340,14 +399,21 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gare-master", type=Path, default=cluster_gates.DEFAULT_GARE_MASTER_PATH)
     parser.add_argument("--matrix-dir", type=Path, default=DEFAULT_MATRIX_DIR)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT_PATH)
+    parser.add_argument(
+        "--db", type=Path, default=None,
+        help="national DB path; when supplied, uses access_anchors for the tollfree matrix",
+    )
     args = parser.parse_args()
     run(
         gare_master_path=args.gare_master,
         matrix_dir=args.matrix_dir,
-        osrm_base_url=args.osrm_base_url,
+        full_url=args.full_url,
+        tollfree_url=args.tollfree_url,
         report_path=args.report,
+        db_path=args.db,
     )
 
 

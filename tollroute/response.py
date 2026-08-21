@@ -352,14 +352,30 @@ def shape_response(
     # the priced frontier.
     register(best_value_route, "toll_optimised")
     if cheapest_route is not None:
-        if tuple(gate_chain(cheapest_route)) == tuple(gate_chain(best_value_route)):
-            labels_by_key[tuple(gate_chain(cheapest_route))].add("cheapest")
-        else:
-            # cheapest and toll_optimised diverge; keep cheapest only if it's
-            # meaningfully different from both fastest and toll_optimised.
-            cheapest_key = tuple(gate_chain(cheapest_route))
-            if cheapest_key != tuple(gate_chain(fastest_route)):
-                register(cheapest_route, "cheapest")
+        # Reject "cheapest" when the destination access leg (last edge on the
+        # path) accounts for the majority of the total route distance.  This
+        # happens when the exit gate is geographically far from the destination:
+        # the route prices only a short motorway section near the origin, then
+        # relies on a long toll-free N-road leg to reach the destination.  In
+        # practice OSRM cannot exclude tolls on the geometry call, so that
+        # long access leg is shown via motorway — misleading the user into
+        # thinking a €X.xx toll covers a journey that in reality costs far more.
+        _cheapest_access_ok = True
+        if cheapest_route.edges and cheapest_route.distance_m:
+            last_edge = cheapest_route.edges[-1]
+            if last_edge.edge_type == EdgeType.ACCESS:
+                dest_access_m = last_edge.distance_m or 0.0
+                if dest_access_m / cheapest_route.distance_m > 0.5:
+                    _cheapest_access_ok = False
+        if _cheapest_access_ok:
+            if tuple(gate_chain(cheapest_route)) == tuple(gate_chain(best_value_route)):
+                labels_by_key[tuple(gate_chain(cheapest_route))].add("cheapest")
+            else:
+                # cheapest and toll_optimised diverge; keep cheapest only if it's
+                # meaningfully different from both fastest and toll_optimised.
+                cheapest_key = tuple(gate_chain(cheapest_route))
+                if cheapest_key != tuple(gate_chain(fastest_route)):
+                    register(cheapest_route, "cheapest")
 
     # Genuinely toll-free routes (all TOLL_FREE edges, €0): offer with a
     # descriptive label subject to the normal detour guard rail. They are only

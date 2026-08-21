@@ -62,6 +62,7 @@ from __future__ import annotations
 import hashlib
 import sqlite3
 import time
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from functools import lru_cache
 
@@ -74,11 +75,10 @@ from tollroute import cost
 from tollroute import geocode as geocode_mod
 from tollroute import graph as graph_mod
 from tollroute import logging as logging_mod
-from tollroute import osrm_client as osrm_client_mod
 from tollroute import response as response_mod
 from tollroute import routing
+from tollroute import routing_engine as routing_engine_mod
 from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH as DEFAULT_DB_PATH
-from tollroute.etl.snap_report import DEFAULT_OSRM_BASE_URL
 
 ROUTE_CACHE_MAXSIZE = 512
 GEOMETRY_TTL_S = 60.0
@@ -100,7 +100,7 @@ async def lifespan(app: FastAPI):
         app.state.class_config = cost.load_class_config(conn)
     finally:
         conn.close()
-    app.state.osrm_client = httpx.Client(base_url=DEFAULT_OSRM_BASE_URL, timeout=30.0)
+    app.state.engine = routing_engine_mod.RoutingEngine()
     app.state.geocode_client = httpx.Client(base_url=geocode_mod.DEFAULT_GEOCODE_BASE_URL, timeout=30.0)
     app.state.geometry_cache: dict[str, tuple[float, list[tuple[float, float]]]] = {}
 
@@ -109,15 +109,18 @@ async def lifespan(app: FastAPI):
         origin_key: tuple[float, float], destination_key: tuple[float, float],
         vehicle_class: int, vot_bucket: float,
     ) -> dict:
-        # Canary first (see module docstring): cheapest possible OSRM call,
-        # so an unavailable OSRM is caught - with its own single retry -
-        # before the two heavier /table batches below ever run.
-        baseline = osrm_client_mod.baseline_route(app.state.osrm_client, origin_key, destination_key)
-
+        # baseline_route (availability canary) and add_access_edges are
+        # independent Valhalla calls — fire concurrently to save ~100ms.
         g = _graph_copy(app.state.graph)
-        origin_node, dest_node = graph_mod.add_access_edges(
-            g, app.state.osrm_client, origin_key, destination_key
-        )
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            baseline_future = pool.submit(
+                app.state.engine.baseline_route, origin_key, destination_key
+            )
+            access_future = pool.submit(
+                graph_mod.add_access_edges, g, app.state.engine, origin_key, destination_key
+            )
+            baseline = baseline_future.result()
+            origin_node, dest_node = access_future.result()
         gate_conn = sqlite3.connect(DEFAULT_DB_PATH)
         try:
             shaped = response_mod.shape_response(
@@ -135,7 +138,7 @@ async def lifespan(app: FastAPI):
 
     app.state.cached_shape = cached_shape
     yield
-    app.state.osrm_client.close()
+    app.state.engine.close()
     app.state.geocode_client.close()
     app.state.cached_shape.cache_clear()
 
@@ -238,7 +241,7 @@ def get_route(
         result = app.state.cached_shape(origin, destination, vehicle_class, float(vot_bucket))
     except routing.RouteNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
-    except osrm_client_mod.OSRMUnavailableError:
+    except routing_engine_mod.RoutingUnavailableError:
         return {"osrm_unavailable": True}
 
     # Assign/refresh a route_id per option and register its waypoints in the
@@ -283,30 +286,17 @@ def get_route(
     }
 
 
-def _osrm_reachable(client: httpx.Client) -> bool:
-    """Cheap OSRM connectivity probe for `/health` (spec: "asserts OSRM
-    reachability", not data freshness) - a `/nearest` lookup near a point
-    inside the loaded France extract, accepting any HTTP response as proof
-    of reachability regardless of its `code` field (a coordinate genuinely
-    outside the graph would still answer, just with `NoSegment`)."""
-    try:
-        resp = client.get("/nearest/v1/car/2.3522,48.8566", timeout=HEALTH_CHECK_TIMEOUT_S)
-        return resp.status_code == 200
-    except httpx.HTTPError:
-        return False
-
-
 @app.get("/health")
 def get_health():
     graph: graph_mod.Graph = app.state.graph
     matrix_loaded = len(graph.nodes) > 0 and len(graph.edges) > 0
-    osrm_reachable = _osrm_reachable(app.state.osrm_client)
+    engine_reachable = app.state.engine.reachable()
     body = {
-        "osrm_reachable": osrm_reachable,
+        "osrm_reachable": engine_reachable,
         "matrix_loaded": matrix_loaded,
         "gate_count": len(graph.gate_coords),
     }
-    return JSONResponse(status_code=200 if (matrix_loaded and osrm_reachable) else 503, content=body)
+    return JSONResponse(status_code=200 if (matrix_loaded and engine_reachable) else 503, content=body)
 
 
 @app.get("/favicon.ico")
@@ -323,8 +313,8 @@ def get_geometry(route_id: str):
     _expiry, waypoints, toll_leg_indices = entry
 
     try:
-        geometry = osrm_client_mod.route_geometry(app.state.osrm_client, waypoints, toll_leg_indices)
-    except osrm_client_mod.OSRMUnavailableError:
+        geometry = app.state.engine.route_geometry(waypoints, toll_leg_indices)
+    except routing_engine_mod.RoutingUnavailableError:
         return {"osrm_unavailable": True}
 
     return geometry

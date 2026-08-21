@@ -46,10 +46,9 @@ from enum import Enum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import httpx
 import numpy as np
 
-from tollroute import osrm_client as osrm_client_mod
+from tollroute import routing_engine as routing_engine_mod
 from tollroute.etl import cluster_gates
 
 if TYPE_CHECKING:
@@ -227,54 +226,9 @@ def _access_anchor_rows(
     return entry, exit_
 
 
-# osrm-routed's default --max-table-size caps max(len(sources), len(destinations))
-# at 100 per request (confirmed empirically against the running bfc-ara instance:
-# 100 passes, 101 returns {"code":"TooBig"}), independent of the full location
-# list's length. With ~209 APRR gates the full N x N matrix needs tiling into
-# <=100 x <=100 blocks and stitching, rather than one request.
+# Tile dimension; kept here because access_anchors.py imports it by this name.
+# routing_engine.TABLE_MAX_DIMENSION is the authoritative copy post-migration.
 OSRM_TABLE_MAX_DIMENSION = 100
-
-
-def osrm_table(
-    client: httpx.Client, coords: list[tuple[float, float]], exclude_toll: bool
-) -> tuple[list[list[float | None]], list[list[float | None]]]:
-    """Full N x N duration+distance matrices, tiled into <=100x100 OSRM /table calls.
-
-    `coords` is a list of (lat, lon); OSRM's own wire format is lon,lat.
-    Public because Phase 3b's national 815x815 matrix precompute
-    (`tollroute/matrices.py`) reuses the same tiling logic rather than
-    duplicating it.
-    """
-    n = len(coords)
-    locations = ";".join(f"{lon},{lat}" for lat, lon in coords)
-    params = "annotations=duration,distance"
-    if exclude_toll:
-        params += "&exclude=toll"
-
-    durations: list[list[float | None]] = [[None] * n for _ in range(n)]
-    distances: list[list[float | None]] = [[None] * n for _ in range(n)]
-
-    blocks = [
-        range(start, min(start + OSRM_TABLE_MAX_DIMENSION, n))
-        for start in range(0, n, OSRM_TABLE_MAX_DIMENSION)
-    ]
-    for src_block in blocks:
-        sources = ";".join(str(i) for i in src_block)
-        for dst_block in blocks:
-            destinations = ";".join(str(i) for i in dst_block)
-            resp = client.get(
-                f"/table/v1/car/{locations}?{params}&sources={sources}&destinations={destinations}"
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if data["code"] != "Ok":
-                raise RuntimeError(f"OSRM /table failed: {data}")
-            for bi, i in enumerate(src_block):
-                for bj, j in enumerate(dst_block):
-                    durations[i][j] = data["durations"][bi][bj]
-                    distances[i][j] = data["distances"][bi][bj]
-
-    return durations, distances
 
 
 def build_graph(
@@ -348,13 +302,39 @@ def build_graph(
         )
     dwell_edge_count = 2 * n
 
+    # Row-level quarantine (`tollroute.validation.distance_error.quarantine_fare_rows`).
+    # Guarded on the column existing so a database built before the column was added still
+    # loads - the migration lives in that module, not here.
+    fares_columns = {row[1] for row in conn.execute("PRAGMA table_info(fares)")}
+    quarantine_clause = " AND quarantined = 0" if "quarantined" in fares_columns else ""
     fare_rows = conn.execute(
         "SELECT from_gare_id, to_gare_id, operator, class1, class2, class3, class4, class5, "
         "distance_km FROM fares WHERE from_gare_id IS NOT NULL AND to_gare_id IS NOT NULL"
+        + quarantine_clause
     ).fetchall()
+    quarantined_row_count = 0
+    if quarantine_clause:
+        quarantined_row_count = conn.execute(
+            "SELECT COUNT(*) FROM fares WHERE quarantined = 1"
+        ).fetchone()[0]
+
+    # The three reasons a fare row can reference an unusable gate used to be counted as one
+    # number, which is what hid a mis-targeted gate quarantine costing 13.5% of the fare
+    # table. They are attributed separately now.
+    suspect_gate_ids = {
+        row[0] for row in conn.execute("SELECT gare_id FROM suspect_gates")
+    }
+    coordinateless_gate_ids = {
+        row[0]
+        for row in conn.execute(
+            "SELECT gare_id FROM gates WHERE snap_lat IS NULL OR snap_lon IS NULL"
+        )
+    }
 
     toll_edge_count = 0
     no_coords_count = 0
+    quarantined_gate_count = 0
+    unclustered_count = 0
     no_osrm_route_count = 0
     freeflow_selfloop_count = 0
     zero_price_dropped_count = 0
@@ -365,7 +345,13 @@ def build_graph(
             # clustering - can't be matrixed, so there's no OSRM-derived
             # distance/time to attach. The edge is logged as skipped, not
             # dropped silently.
-            no_coords_count += 1
+            endpoints = (from_id, to_id)
+            if any(gid in coordinateless_gate_ids for gid in endpoints):
+                no_coords_count += 1
+            elif any(gid in suspect_gate_ids for gid in endpoints):
+                quarantined_gate_count += 1
+            else:
+                unclustered_count += 1
             continue
 
         if from_id == to_id:
@@ -432,9 +418,23 @@ def build_graph(
 
     if no_coords_count:
         logger.warning(
-            "%d fare rows reference a gate with no coordinates, a quarantined gate, or "
-            "an unclustered gate; skipped as toll edges",
+            "%d fare rows reference a gate with no coordinates; skipped as toll edges",
             no_coords_count,
+        )
+    if quarantined_gate_count:
+        logger.warning(
+            "%d fare rows reference a quarantined (suspect_gates) gate; skipped as toll edges",
+            quarantined_gate_count,
+        )
+    if unclustered_count:
+        logger.warning(
+            "%d fare rows reference an unclustered gate; skipped as toll edges",
+            unclustered_count,
+        )
+    if quarantined_row_count:
+        logger.info(
+            "%d fare rows individually quarantined on distance error; excluded by query",
+            quarantined_row_count,
         )
     if no_osrm_route_count:
         logger.warning(
@@ -595,7 +595,7 @@ def _add_transfer_edges(
 
 def add_access_edges(
     graph: Graph,
-    osrm_client: httpx.Client,
+    engine: routing_engine_mod.RoutingEngine,
     origin: tuple[float, float],
     destination: tuple[float, float],
 ) -> tuple[Node, Node]:
@@ -609,12 +609,18 @@ def add_access_edges(
 
     Origin lands on every gate's IN node (an ordinary approach — fine to
     enter a toll edge immediately afterwards, same as any other IN arrival).
-    Destination is reachable from every gate's OUT and OUT_TOLL node (both
-    are valid "off the tolled network, free to finish the journey" points).
+    Destination is reachable from every gate's OUT_TOLL node only (the node
+    reached after arriving at a gate via a priced toll edge then dwelling).
+    OUT is never given an exit access edge: physically, a driver who arrives
+    at a gate plaza via the free-road network (ACCESS→IN→DWELL→OUT) cannot
+    exit via the free-road network without first taking a toll section — the
+    plaza is a one-way motorway entry/exit, not a throughway. Granting OUT an
+    exit edge produces phantom €0 "pass-through" routes (origin→gate→DWELL→
+    destination at zero cost) that have no physical basis.
 
-    **Phase 4c:** fetches those legs via two batched OSRM `/table` calls
-    (`tollroute.osrm_client.one_to_many_table`/`many_to_one_table`, each
-    internally tiled to <=100-wide requests) rather than one `/route` call
+    **Phase 4c:** fetches those legs via two batched table calls
+    (`tollroute.routing_engine.RoutingEngine.one_to_many_table`/`many_to_one_table`,
+    each internally tiled to <=100-wide requests) rather than one `/route` call
     per gate per direction - replaces what was up to ~1,600 sequential HTTP
     round trips (measured ~19.5 s warm against the national 815-gate DB, see
     IMPLEMENTATION_PLAN.md's Phase 4c entry) with ~18, which is what gets a
@@ -679,19 +685,16 @@ def add_access_edges(
     # toll-edge accounting (confirmed empirically: Dijon->Lyon's access edge
     # alone reproduced the tolled route's distance/duration almost exactly,
     # at zero toll).
-    # Phase 4c-follow-up-4: the two /table batches are independent of each
+    # Phase 4c-follow-up-4: the two table batches are independent of each
     # other (one origin->gates, one gates->destination), so fire them
-    # concurrently rather than paying their wall-clock sequentially -
-    # `httpx.Client` is thread-safe for this (see `osrm_client._get_json_concurrent`,
-    # which each call below also uses internally to tile its own <=100-wide
-    # blocks). Halves this function's OSRM wait time with no change to which
-    # access edges are added or their values.
+    # concurrently rather than paying their wall-clock sequentially.
+    # Each call internally tiles its own <=100-wide blocks concurrently.
     with ThreadPoolExecutor(max_workers=2) as pool:
         entry_future = pool.submit(
-            osrm_client_mod.one_to_many_table, osrm_client, origin, entry_coords, exclude_toll=True
+            engine.one_to_many_table, origin, entry_coords, exclude_toll=True
         )
         exit_future = pool.submit(
-            osrm_client_mod.many_to_one_table, osrm_client, exit_coords, destination, exclude_toll=True
+            engine.many_to_one_table, exit_coords, destination, exclude_toll=True
         )
         entry_legs = entry_future.result()
         exit_legs = exit_future.result()
@@ -718,12 +721,7 @@ def add_access_edges(
             no_toll_free_access_count += 1
             continue
         duration, distance = _with_apron(graph.access_anchors_exit, gid, *leg)
-        roles = (
-            (NodeRole.OUT_TOLL,)
-            if gid in graph.freeflow_selfloop_gate_ids
-            else (NodeRole.OUT, NodeRole.OUT_TOLL)
-        )
-        for role in roles:
+        for role in (NodeRole.OUT_TOLL,):
             node = Node(gid, role)
             if node not in graph.node_index:
                 continue

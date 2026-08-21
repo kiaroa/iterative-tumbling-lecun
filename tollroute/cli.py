@@ -14,12 +14,11 @@ import logging
 import sqlite3
 from pathlib import Path
 
-import httpx
-
 from tollroute import graph as graph_mod
 from tollroute import routing
 from tollroute.etl.build_national import DEFAULT_NATIONAL_DB_PATH as DEFAULT_DB_PATH
-from tollroute.etl.snap_report import CLERMONT_FERRAND, DEFAULT_OSRM_BASE_URL, MONTPELLIER
+from tollroute.etl.snap_report import CLERMONT_FERRAND, MONTPELLIER
+from tollroute.routing_engine import DEFAULT_FULL_URL, DEFAULT_TOLLFREE_URL, RoutingEngine
 
 logger = logging.getLogger(__name__)
 
@@ -59,21 +58,23 @@ def run(
     dest_name: str,
     vehicle_class: int,
     db_path: Path = DEFAULT_DB_PATH,
-    osrm_base_url: str = DEFAULT_OSRM_BASE_URL,
+    engine: RoutingEngine | None = None,
 ) -> routing.Route:
     origin_coords = resolve_city(origin_name)
     dest_coords = resolve_city(dest_name)
 
+    own_engine = engine is None
+    if own_engine:
+        engine = RoutingEngine()
     conn = sqlite3.connect(db_path)
     try:
         g = graph_mod.build_graph(conn)
-        with httpx.Client(base_url=osrm_base_url, timeout=30.0) as client:
-            origin_node, dest_node = graph_mod.add_access_edges(
-                g, client, origin_coords, dest_coords
-            )
-            return routing.find_route(g, origin_node, dest_node, vehicle_class)
+        origin_node, dest_node = graph_mod.add_access_edges(g, engine, origin_coords, dest_coords)
+        return routing.find_route(g, origin_node, dest_node, vehicle_class)
     finally:
         conn.close()
+        if own_engine:
+            engine.close()
 
 
 def format_route(route: routing.Route, origin_name: str, dest_name: str, vehicle_class: int) -> str:
@@ -103,10 +104,15 @@ def main() -> None:
         "--class", dest="vehicle_class", type=int, default=1, choices=range(1, 6)
     )
     parser.add_argument("--db", type=Path, default=DEFAULT_DB_PATH)
-    parser.add_argument("--osrm-base-url", default=DEFAULT_OSRM_BASE_URL)
+    parser.add_argument("--full-url", default=DEFAULT_FULL_URL)
+    parser.add_argument("--tollfree-url", default=DEFAULT_TOLLFREE_URL)
     args = parser.parse_args()
 
-    route = run(args.origin, args.destination, args.vehicle_class, args.db, args.osrm_base_url)
+    engine = RoutingEngine(full_url=args.full_url, tollfree_url=args.tollfree_url)
+    try:
+        route = run(args.origin, args.destination, args.vehicle_class, args.db, engine=engine)
+    finally:
+        engine.close()
     print(format_route(route, args.origin, args.destination, args.vehicle_class))
 
 
